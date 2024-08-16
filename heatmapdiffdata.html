@@ -6,6 +6,7 @@
     initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 </head>
 <body>
+<h1>Make diff data for HeatmapWithTime</h1>
 <div id="toolbar">
     Load heatmap data: <input type="file" id="fileElem" accept=".json" multiple />
 </div>
@@ -31,8 +32,10 @@ fileElem.addEventListener("change", () => {
 });
 
 function makeDiff(data) {
-    const systems = data.systems.map(timedata => {
-        return timedata.map((latLonWeightsAtTime, timeidx) => {
+    const series = {};
+    Object.keys(data.series).forEach(seriesId => {
+        const timedata = data.series[seriesId];
+        series[seriesId] = timedata.map((latLonWeightsAtTime, timeidx) => {
             if (timeidx === 0) {
                 return null;
             }
@@ -54,7 +57,7 @@ function makeDiff(data) {
             });
         }).slice(1);
     });
-    return {times: data.times.slice(1), systems};
+    return {times: data.times.slice(1), series};
 }
 </script>
 </html>

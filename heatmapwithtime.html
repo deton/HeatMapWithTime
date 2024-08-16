@@ -162,7 +162,6 @@ function loadData(data) {
         currentTime: new Date(1)
     });
 
-    //const times = data.times.map(x => (new Date(x * 1000)).toISOString());
     heatmapControl = new L.Control.TimeDimensionCustom(data.times, {
         autoPlay: true,
         loopButton: true,
@@ -175,15 +174,16 @@ function loadData(data) {
     }).addTo(map);
 
     if (!latlon) {
-        map.fitBounds(L.latLngBounds(data.systems[0][0].map(latLonWeight => latLonWeight.slice(0, 2))));
+        map.fitBounds(L.latLngBounds(Object.values(data.series)[0][0].map(latLonWeight => latLonWeight.slice(0, 2))));
     }
     heatmapLayers.forEach(layer => {
         layerControl.removeLayer(layer);
         layer.remove();
     });
-    heatmapLayers = data.systems.flatMap((system, idx) => {
+    heatmapLayers = Object.keys(data.series).flatMap((seriesId, idx) => {
+        const timedata = data.series[seriesId];
         if (!splitNegativeWeight) {
-            const layer = new TDHeatmap(system, {
+            const layer = new TDHeatmap(timedata, {
                 heatmapOptions: {
                     blur: 0.8,
                     minOpacity: 0,
@@ -193,10 +193,10 @@ function loadData(data) {
                 },
                 weightIndex: weightIndex,
             }).addTo(map);
-            layerControl.addOverlay(layer, 'system' + idx); //TODO:system_id
+            layerControl.addOverlay(layer, seriesId);
             return layer;
         }
-        const neg = system.map(latLonWeightsAtTime =>
+        const neg = timedata.map(latLonWeightsAtTime =>
             latLonWeightsAtTime.filter(latLonWeight =>
                 latLonWeight[weightIndex] < 0).map(latLonWeight => {
                     const absarr = [...latLonWeight];
@@ -213,10 +213,9 @@ function loadData(data) {
             },
             weightIndex: weightIndex,
         }).addTo(map);
-        layerControl.addOverlay(negLayer, 'system' + idx + '_neg'); //TODO:system_id
 
         // XXX: max weights may differ between positive layer and negative layer
-        const pos = system.map(latLonWeightsAtTime =>
+        const pos = timedata.map(latLonWeightsAtTime =>
             latLonWeightsAtTime.filter(latLonWeight =>
                 latLonWeight[weightIndex] > 0));
         const posLayer = new TDHeatmap(pos, {
@@ -229,7 +228,9 @@ function loadData(data) {
             },
             weightIndex: weightIndex,
         }).addTo(map);
-        layerControl.addOverlay(posLayer, 'system' + idx); //TODO:system_id
+
+        layerControl.addOverlay(posLayer, seriesId + '_pos');
+        layerControl.addOverlay(negLayer, seriesId + '_neg');
         return [negLayer, posLayer];
     });
 }

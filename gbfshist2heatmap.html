@@ -6,9 +6,62 @@
     initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 </head>
 <body>
+<h1>Make data for HeatmapWithTime</h1>
 <div id="toolbar">
-    Load data: <input type="file" id="fileElem" accept=".ndjson" multiple />
+    Load input data: <input type="file" id="fileElem" accept=".ndjson" multiple />
 </div>
+
+<h2>Input data format</h2>
+<p>
+Input JSON format on each NDJSON line:
+<ul>
+    <li>ts: Time stamp label (in any format)</li>
+    <li>system_id: system_id from system_information.json</li>
+    <li>status: Array of [station_id, num_bikes_available, num_docks_available] from station_status.json</li>
+    <li>stations (Optional): {station_id: [lat,lon,name], ...} from station_information.json</li>
+</ul>
+</p>
+
+<p>
+Input data example:
+</p>
+<pre>
+{"ts":"2024-08-15T00:02","system_id":"docomo-cycle","status":[["00000001",4,16],["00000002",0,6],...],"stations":{"00000001":[38.269793,140.874203,"04.ドコモ東北ビル"],...}}
+{"ts":"2024-08-15T00:02","system_id":"hellocycling","status":[["17",2,6],["26",10,0],...],"stations":{"17":[35.707252,139.777587,"新御徒町ステーション"],...}}
+{"ts":"2024-08-15T00:32","system_id":"docomo-cycle","status":[["00000001",5,15],["00000002",0,6],...]}
+{"ts":"2024-08-15T00:32","system_id":"hellocycling","status":[["17",2,6],["26",10,0],...]}
+...
+</pre>
+
+<h2>Output data format</h2>
+<ul>
+    <li>times: Time index array</li>
+    <li>
+        series: {series_id: [latLonWeightsAtTime0, latLonWeightsAtTime1, ...]}
+        <ul>
+            <li>latLonWeightsAtTimeX: [[lat,lon,num_bikes_available,num_docks_available],[lat2,lon2,bikes2,docks2],...]
+        </ul>
+    </li>
+</ul>
+
+<p>
+Output data example:
+</p>
+<pre>
+{
+    "times": ["2024-08-15T00:02", "2024-08-15T00:32", ...],
+    "series": {
+        "docomo-cycle": [
+            [[38.269793,140.874203,4,16], [38.267867,140.871866,0,6], ...],
+            [[38.269793,140.874203,5,15], [38.267867,140.871866,0,6], ...],
+        ],
+        "hellocycling": [
+            [[35.707252,139.777587,2,6], [35.844371034915,139.65882343225,10,0], ...],
+            [[35.707252,139.777587,2,6], [35.844371034915,139.65882343225,10,0], ...],
+        ]
+    }
+}
+</pre>
 </body>
 <script>
 const fileInput = document.getElementById("fileElem");
@@ -31,16 +84,15 @@ fileElem.addEventListener("change", () => {
 });
 
 function loadData(text) {
-    const systemIds = [];
     const times = [];
-    const outdata = [];
-    const stations = [];
-    text.split('\n').filter(x => x).forEach(line => {
+    const outdata = {};
+    const stations = {};
+    text.split('\n').filter(x => x).forEach((line, lnum) => {
         let indata;
         try {
             indata = JSON.parse(line);
         } catch (err) {
-            console.error(err, line);
+            console.error(err, lnum, line);
         }
         const timekey = indata.ts;
         if (!times.includes(timekey)) {
@@ -48,29 +100,26 @@ function loadData(text) {
         }
 
         const systemId = indata.system_id;
-        let systemIdx = systemIds.indexOf(systemId);
-        if (systemIdx === -1) {
-            systemIds.push(systemId);
-            systemIdx = systemIds.indexOf(systemId);
-            outdata[systemIdx] = [];
-            stations[systemIdx] = {};
+        if (!(systemId in outdata)) {
+            outdata[systemId] = [];
+            stations[systemId] = {};
         }
 
         const d = indata;
         if (d.stations) {
-            stations[systemIdx] = d.stations;
+            stations[systemId] = d.stations;
         }
         const latLonWeight = d.status.map(idBikeDock => {
             const [id, bike, dock] = idBikeDock;
-            if (!(id in stations[systemIdx])) {
+            if (!(id in stations[systemId])) {
                 console.error(timekey, systemId, id);
             }
-            const st = stations[systemIdx][id];
+            const st = stations[systemId][id];
             return [st[0], st[1], bike, dock];
         });
-        outdata[systemIdx][times.length - 1] = latLonWeight;
+        outdata[systemId][times.length - 1] = latLonWeight;
     });
-    return {times, systemIds, systems: outdata};
+    return {times, series: outdata};
 }
 </script>
 </html>
