@@ -9,6 +9,8 @@
 <meta name="viewport" content="width=device-width,
     initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <style>
+/* https://github.com/pa7/heatmap.js/issues/96 */
+.leaflet-zoom-hide { position: absolute!important; }
 #toolbar {
     position: absolute;
     top: 5px;
@@ -65,16 +67,14 @@ var TDHeatmap = L.TimeDimension.Layer.extend({
         return true;
     },
     _getDataForTime: function(time) {
+        const weightIdx = this.options.weightIndex || 2;
         delete this._currentTimeData.data;
-        this._currentTimeData.data = [];
         var data = this.data[time-1];
-        for (var i = 0; i < data.length; i++) {
-            this._currentTimeData.data.push({
-                lat: data[i][0],
-                lng: data[i][1],
-                count: data[i].length>2 ? data[i][2] : this.defaultWeight
-            });
-        }
+        this._currentTimeData.data = data.map(x => ({
+            lat: x[0],
+            lng: x[1],
+            count: x.length > weightIdx ? x[weightIdx] : this.defaultWeight,
+        })).filter(x => x.count !== 0);
         this._currentLoadedTime = time;
         if (this._timeDimension && time == this._timeDimension.getCurrentTime() && !this._timeDimension.isLoading()) {
             this._update();
@@ -112,37 +112,31 @@ var map = L.map('map');
 L.tileLayer('https://tile.openstreetmap.jp/styles/osm-bright/{z}/{x}/{y}.png', {
     attribution: '<a href="https://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'
 }).addTo(map);
+const layerControl = L.control.layers(null, null, {
+    collapsed: false,
+}).addTo(map);
 
-/*
-// from example9.js of Leaflet.TimeDimension
-// start of TimeDimension manual instantiation
-var timeDimension = new L.TimeDimension({
-    period: "PT5M",
-});
-// helper to share the timeDimension object between all layers
-map.timeDimension = timeDimension; 
-// otherwise you have to set the 'timeDimension' option on all layers.
-
-var player = new L.TimeDimension.Player({
-    transitionTime: 100, 
-    loop: false,
-    startOver:true
-}, timeDimension);
-
-var timeDimensionControlOptions = {
-    player:        player,
-    timeDimension: timeDimension,
-    position:      'bottomleft',
-    autoPlay:      true,
-    minSpeed:      1,
-    speedStep:     0.5,
-    maxSpeed:      15,
-    timeSliderDragUpdate: true
-};
-
-var timeDimensionControl = new L.Control.TimeDimension(timeDimensionControlOptions);
-map.addControl(timeDimensionControl);
-*/
+const urlParams = new URLSearchParams(document.location.search);
+let latlon = urlParams.get('latlon');
+if (latlon) {
+    latlon = latlon.split(',').map(Number);
+    let zoom = +urlParams.get('zoom') || 13;
+    map.setView(latlon, zoom);
+}
+let HEATMAP_GRADIENTS = urlParams.get('gradients');
+if (HEATMAP_GRADIENTS) {
+    HEATMAP_GRADIENTS = JSON.parse(HEATMAP_GRADIENTS);
+} else {
+    HEATMAP_GRADIENTS = [{1: 'red'}, {1: 'magenta'}];
+}
+let HEATMAP_GRADIENTS_NEG = urlParams.get('gradients_neg');
+if (HEATMAP_GRADIENTS_NEG) {
+    HEATMAP_GRADIENTS_NEG = JSON.parse(HEATMAP_GRADIENTS_NEG);
+} else {
+    HEATMAP_GRADIENTS_NEG = [{1: 'green'}, {1: 'blue'}];
+}
+const weightIndex = urlParams.get('weightIndex') || 2;
+const splitNegativeWeight = urlParams.get('negative');
 
 const fileInput = document.getElementById("fileElem");
 fileElem.addEventListener("change", () => {
@@ -155,9 +149,8 @@ fileElem.addEventListener("change", () => {
     //fileElem.value = '';
 });
 
-let heatmapPlayer;
 let heatmapControl;
-let heatmapLayer;
+let heatmapLayers = [];
 
 function loadData(data) {
     if (heatmapControl) {
@@ -169,22 +162,76 @@ function loadData(data) {
         currentTime: new Date(1)
     });
 
-    //heatmapPlayer = new L.TimeDimension.Player({
-    //}, map.timeDimension);
-
     //const times = data.times.map(x => (new Date(x * 1000)).toISOString());
     heatmapControl = new L.Control.TimeDimensionCustom(data.times, {
-        //player: heatmapPlayer,
+        autoPlay: true,
+        loopButton: true,
+        minSpeed: 1,
+        speedStep: 0.5,
+        playerOptions: {
+            loop: true,
+            startOver: true,
+        },
     }).addTo(map);
 
-    if (heatmapLayer) {
-        heatmapLayer.remove();
+    if (!latlon) {
+        map.fitBounds(L.latLngBounds(data.systems[0][0].map(latLonWeight => latLonWeight.slice(0, 2))));
     }
-    map.fitBounds(L.latLngBounds(data.latLonWeights[0].map(latLonWeight => latLonWeight.slice(0, 2))));
-    heatmapLayer = new TDHeatmap(data.latLonWeights, {
-        heatmapOptions: {
+    heatmapLayers.forEach(layer => {
+        layerControl.removeLayer(layer);
+        layer.remove();
+    });
+    heatmapLayers = data.systems.flatMap((system, idx) => {
+        if (!splitNegativeWeight) {
+            const layer = new TDHeatmap(system, {
+                heatmapOptions: {
+                    blur: 0.8,
+                    minOpacity: 0,
+                    maxOpacity: 0.6,
+                    useLocalExtrema: true,
+                    gradient: HEATMAP_GRADIENTS[idx % HEATMAP_GRADIENTS.length],
+                },
+                weightIndex: weightIndex,
+            }).addTo(map);
+            layerControl.addOverlay(layer, 'system' + idx); //TODO:system_id
+            return layer;
         }
-    }).addTo(map);
+        const neg = system.map(latLonWeightsAtTime =>
+            latLonWeightsAtTime.filter(latLonWeight =>
+                latLonWeight[weightIndex] < 0).map(latLonWeight => {
+                    const absarr = [...latLonWeight];
+                    absarr[weightIndex] = Math.abs(absarr[weightIndex]);
+                    return absarr;
+                }));
+        const negLayer = new TDHeatmap(neg, {
+            heatmapOptions: {
+                blur: 0.8,
+                minOpacity: 0,
+                maxOpacity: 0.6,
+                useLocalExtrema: true,
+                gradient: HEATMAP_GRADIENTS_NEG[idx % HEATMAP_GRADIENTS_NEG.length],
+            },
+            weightIndex: weightIndex,
+        }).addTo(map);
+        layerControl.addOverlay(negLayer, 'system' + idx + '_neg'); //TODO:system_id
+
+        // XXX: max weights may differ between positive layer and negative layer
+        const pos = system.map(latLonWeightsAtTime =>
+            latLonWeightsAtTime.filter(latLonWeight =>
+                latLonWeight[weightIndex] > 0));
+        const posLayer = new TDHeatmap(pos, {
+            heatmapOptions: {
+                blur: 0.8,
+                minOpacity: 0,
+                maxOpacity: 0.6,
+                useLocalExtrema: true,
+                gradient: HEATMAP_GRADIENTS[idx % HEATMAP_GRADIENTS.length],
+            },
+            weightIndex: weightIndex,
+        }).addTo(map);
+        layerControl.addOverlay(posLayer, 'system' + idx); //TODO:system_id
+        return [negLayer, posLayer];
+    });
 }
 
 </script>
