@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width,
+    initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+</head>
+<body>
+<div id="toolbar">
+    Load data: <input type="file" id="fileElem" accept=".ndjson" multiple />
+</div>
+</body>
+<script>
+const fileInput = document.getElementById("fileElem");
+fileElem.addEventListener("change", () => {
+    Array.from(fileElem.files).forEach(file => {
+        file.text().then(text => {
+            const result = loadData(text);
+            const outfname = file.name.replace(/\.ndjson$/, '.json');
+            const outfile = new File([JSON.stringify(result)], outfname, {
+              type: 'application/json'
+            });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(outfile);
+            a.download = outfile.name;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }).catch(console.error);
+    });
+    //fileElem.value = '';
+});
+
+function loadData(text) {
+    const systemIds = [];
+    const times = [];
+    const outdata = [];
+    const stations = [];
+    text.split('\n').filter(x => x).forEach(line => {
+        let indata;
+        try {
+            indata = JSON.parse(line);
+        } catch (err) {
+            console.error(err, line);
+        }
+        const timekey = indata.ts;
+        if (!times.includes(timekey)) {
+            times.push(timekey);
+        }
+
+        const systemId = indata.system_id;
+        let systemIdx = systemIds.indexOf(systemId);
+        if (systemIdx === -1) {
+            systemIds.push(systemId);
+            systemIdx = systemIds.indexOf(systemId);
+            outdata[systemIdx] = [];
+            stations[systemIdx] = {};
+        }
+
+        const d = indata;
+        if (d.stations) {
+            stations[systemIdx] = d.stations;
+        }
+        const latLonWeight = d.status.map(idBikeDock => {
+            const [id, bike, dock] = idBikeDock;
+            if (!(id in stations[systemIdx])) {
+                console.error(timekey, systemId, id);
+            }
+            const st = stations[systemIdx][id];
+            return [st[0], st[1], bike, dock];
+        });
+        outdata[systemIdx][times.length - 1] = latLonWeight;
+    });
+    return {times, systemIds, systems: outdata};
+}
+</script>
+</html>

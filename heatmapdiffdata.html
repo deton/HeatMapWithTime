@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width,
+    initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+</head>
+<body>
+<div id="toolbar">
+    Load heatmap data: <input type="file" id="fileElem" accept=".json" multiple />
+</div>
+</body>
+<script>
+const fileInput = document.getElementById("fileElem");
+fileElem.addEventListener("change", () => {
+    Array.from(fileElem.files).forEach(file => {
+        file.text().then(text => {
+            const result = makeDiff(JSON.parse(text));
+            const outfname = file.name.replace(/\.json$/, '_diff.json');
+            const outfile = new File([JSON.stringify(result)], outfname, {
+              type: 'application/json'
+            });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(outfile);
+            a.download = outfile.name;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }).catch(console.error);
+    });
+    //fileElem.value = '';
+});
+
+function makeDiff(data) {
+    const systems = data.systems.map(timedata => {
+        return timedata.map((latLonWeightsAtTime, timeidx) => {
+            if (timeidx === 0) {
+                return null;
+            }
+            const prev = timedata[timeidx - 1];
+            return latLonWeightsAtTime.map((latLonWeight, poiidx) => {
+                return latLonWeight.map((x, valueidx) => {
+                    if (valueidx < 2) { // [lat, lon]
+                        return x;
+                    }
+                    return (x - prev[poiidx][valueidx]);
+                    /*
+                    if (diff < 0) {
+                        return [0, -diff];
+                    } else {
+                        return [diff, 0];
+                    }
+                    */
+                });
+            });
+        }).slice(1);
+    });
+    return {times: data.times.slice(1), systems};
+}
+</script>
+</html>
