@@ -28,8 +28,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-timedimension@1.1.1/dist/leaflet.timedimension.control.css"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// https://github.com/python-visualization/folium/blob/553a33981fa29a9d4ce6c426563749188906610f/folium/plugins/timestamped_geo_json.py#L84
-
+// based on https://github.com/python-visualization/folium/blob/553a33981fa29a9d4ce6c426563749188906610f/folium/plugins/timestamped_geo_json.py#L84
 L.Control.TimeDimensionCustom = L.Control.TimeDimension.extend({
     _getDisplayDateFormat: function(date){
         var newdate = new moment(date);
@@ -42,16 +41,13 @@ L.Control.TimeDimensionCustom = L.Control.TimeDimension.extend({
 <body>
 <div id="map"></div>
 <div id="toolbar" class="leaflet-control">
-    Import data: <input type="file" id="fileElem" accept=".geojson" />
+    Import TimestampedGeoJson: <input type="file" id="fileElem" accept=".geojson" />
 </div>
 </body>
 <script>
 var map = L.map('map');
 L.tileLayer('https://tile.openstreetmap.jp/styles/osm-bright/{z}/{x}/{y}.png', {
     attribution: '<a href="https://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'
-}).addTo(map);
-const layerControl = L.control.layers(null, null, {
-    collapsed: false,
 }).addTo(map);
 
 const urlParams = new URLSearchParams(document.location.search);
@@ -105,26 +101,18 @@ function loadData(data) {
     data.features.forEach(feature => {
         feature.properties.origTimes = [...feature.properties.times];
     });
+    const valuekeys = data.valuekeys || [];
 
     if (iconDLayer) {
         iconDLayer.remove();
     }
     // TODO: make geojson layers for each system_id to control toggle display
     const iconLayer = L.geoJson(data, {
-        pointToLayer,
+        pointToLayer: (feature, latLng) => {
+            return pointToLayer(feature, latLng, valuekeys.length > 0 ? valuekeys[0] : undefined);
+        },
         onEachFeature: (feature, layer) => {
-            bindPopupTooltip(feature, layer);
-            /*
-            // convert string times to number [ms].
-            // cf. L.TimeDimension.Layer.GeoJson._getFeatureTimes()
-            //feature.properties.origTimes = [...feature.properties.times]; // XXX: too late
-            feature.properties.times = feature.properties.times.map(time => {
-                if (typeof time == 'string' || time instanceof String) {
-                    return Date.parse(time.trim());
-                }
-                return time;
-            });
-            */
+            bindPopupTooltip(feature, layer, valuekeys);
         }
     });
     if (!latlon) {
@@ -137,10 +125,10 @@ function loadData(data) {
         updateTimeDimensionMode: 'replace',
     });
     iconDLayer.addTo(map);
-    //layerControl.addOverlay(iconDLayer, seriesId);
 }
 
-function pointToLayer(feature, latLng) {
+// based on https://github.com/python-visualization/folium/blob/553a33981fa29a9d4ce6c426563749188906610f/folium/plugins/timestamped_geo_json.py#L102
+function pointToLayer(feature, latLng, valuekey) {
     let iconstyle = feature.properties.iconstyle;
     if (feature.properties.icon == 'marker') {
         if (iconstyle) {
@@ -152,15 +140,19 @@ function pointToLayer(feature, latLng) {
     }
     if (feature.properties.icon == 'circle') {
         if (iconstyle) {
+            if (!valuekey) {
+                return new L.circleMarker(latLng, iconstyle);
+            }
             const cur = map.timeDimension.getCurrentTime();
             let idx = -1;
             if (feature.properties.times) { // [Number]
                 idx = feature.properties.times.indexOf(cur);
             }
+            const defradius = iconstyle.radius || 2;
             return new L.circleMarker(latLng, {
                 ...iconstyle,
-                radius: feature.properties.bikes.at(idx) + 2,
-                //radius: Math.log2(1 + feature.properties.bikes.at(idx)) + 2,
+                radius: feature.properties[valuekey].at(idx) + defradius,
+                //radius: Math.log2(1 + feature.properties[valuekey].at(idx)) + defradius,
             });
         }
         return new L.circleMarker(latLng);
@@ -168,35 +160,33 @@ function pointToLayer(feature, latLng) {
     return new L.Marker(latLng);
 }
 
-function bindPopupTooltip(feature, layer) {
+function bindPopupTooltip(feature, layer, valuekeys) {
     if (feature.properties.tooltip) {
         layer.bindTooltip(feature.properties.tooltip);
     }
-    if (!(feature.properties.origTimes && feature.properties.bikes)) {
+    if (!(feature.properties.origTimes && valuekeys.length > 0 && feature.properties[valuekeys[0]])) {
+        if (feature.properties.popup) {
+            layer.bindPopup(feature.properties.popup);
+        }
         return;
     }
     layer.bindPopup((layer) => {
-        console.log(feature.properties);
         const canvas = document.createElement('canvas');
         new Chart(canvas, {
             type: 'line',
             data: {
+                // TODO: avoid hard coding: s.substring(11)
                 labels: feature.properties.origTimes.map(s => s.substring(11)),
-                datasets: [{
-                    label: 'bikes_available',
-                    data: feature.properties.bikes,
-                    borderColor: 'red',
-                }, {
-                    label: 'docks_available',
-                    data: feature.properties.docks,
-                    borderColor: 'blue',
-                }]
+                datasets: valuekeys.map(key => ({
+                    label: key,
+                    data: feature.properties[key],
+                })),
             },
             options: {
                 plugins: {
                     title: {
-                        text: feature.properties.id,
-                        display: true,
+                        text: feature.properties.popup,
+                        display: feature.properties.popup ? true : false,
                     },
                 }
             }

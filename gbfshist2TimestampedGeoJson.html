@@ -43,6 +43,7 @@ Output data example:
 <pre>
 {
     "type": "FeatureCollection",
+    "valuekeys": ["bikes", "docks"],
     "features": [{
         "type": "Feature",
         "geometry": {
@@ -50,7 +51,7 @@ Output data example:
             "coordinates": [140.874203, 38.269793]
         },
         "properties": {
-            "id": "docomo-cycle 00000001",
+            "popup": "docomo-cycle 00000001",
             "times": ["2024-08-15T00:02", "2024-08-15T00:32", ...]
             "bikes": [4, 5, ...],
             "docks": [16, 15, ...]
@@ -116,7 +117,7 @@ function loadData(text) {
                         coordinates: [lon, lat],
                     },
                     properties: {
-                        id: featureId,
+                        popup: featureId,
                         //system_id: systemId,
                         //station_id: id,
                         //name: name, // XXX: not include to reduce geojson size
@@ -126,7 +127,7 @@ function loadData(text) {
                         icon: 'circle',
                         iconstyle: {
                             color: systemId === 'hellocycling' ? '#fabe00' : '#cc0033',
-                            radius: 4,
+                            radius: 2,
                         },
                     }
                 };
@@ -136,7 +137,11 @@ function loadData(text) {
             features[featureId].properties.docks.push(dock);
         });
     });
-    return {type: 'FeatureCollection', features: Object.values(features)};
+    return {
+        type: 'FeatureCollection',
+        valuekeys: ['bikes', 'docks'],
+        features: Object.values(features)
+    };
 }
 </script>
 </html>
