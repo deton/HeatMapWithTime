@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<title>HeatMapWithTime</title>
 <style>html, body {width: 100%;height: 100%;margin: 0;padding: 0;}</style>
 <style>#map {position:absolute;top:0;bottom:0;right:0;left:0;}</style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"/>
@@ -24,7 +25,7 @@
 <script src="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/pa7_leaflet_hm.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-timedimension@1.1.1/dist/leaflet.timedimension.control.css"/>
 <script>
-// https://github.com/python-visualization/folium/blob/553a33981fa29a9d4ce6c426563749188906610f/folium/plugins/heat_map_withtime.py#L217
+// based on https://github.com/python-visualization/folium/blob/553a33981fa29a9d4ce6c426563749188906610f/folium/plugins/heat_map_withtime.py#L217
 var TDHeatmap = L.TimeDimension.Layer.extend({
     initialize: function(data, options) {
         var heatmapCfg = {
@@ -47,6 +48,7 @@ var TDHeatmap = L.TimeDimension.Layer.extend({
         };
         this.data= data;
         this.defaultWeight = heatmapCfg.defaultWeight || 1;
+        this.weightIndex = this.options.weightIndex || 2;
     },
     onAdd: function(map) {
         L.TimeDimension.Layer.prototype.onAdd.call(this, map);
@@ -67,13 +69,12 @@ var TDHeatmap = L.TimeDimension.Layer.extend({
         return true;
     },
     _getDataForTime: function(time) {
-        const weightIdx = this.options.weightIndex || 2;
         delete this._currentTimeData.data;
         var data = this.data[time-1];
         this._currentTimeData.data = data.map(x => ({
             lat: x[0],
             lng: x[1],
-            count: x.length > weightIdx ? x[weightIdx] : this.defaultWeight,
+            count: x.length > this.weightIndex ? x[this.weightIndex] : this.defaultWeight,
         })).filter(x => x.count !== 0);
         this._currentLoadedTime = time;
         if (this._timeDimension && time == this._timeDimension.getCurrentTime() && !this._timeDimension.isLoading()) {
@@ -137,6 +138,10 @@ if (HEATMAP_GRADIENTS_NEG) {
 }
 const weightIndex = urlParams.get('weightIndex') || 2;
 const splitNegativeWeight = urlParams.get('negative');
+const jsonurl = urlParams.get('jsonurl');
+if (jsonurl) {
+  fetch(jsonurl).then(res => res.json()).then(json => loadData(json)).catch(console.error);
+}
 
 const fileInput = document.getElementById("fileElem");
 fileElem.addEventListener("change", () => {
