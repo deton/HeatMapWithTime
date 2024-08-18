@@ -61,6 +61,10 @@ if (latlon) {
     let zoom = +urlParams.get('zoom') || 13;
     map.setView(latlon, zoom);
 }
+const jsonurl = urlParams.get('jsonurl');
+if (jsonurl) {
+  fetch(jsonurl).then(res => res.json()).then(json => loadData(json)).catch(console.error);
+}
 
 const fileInput = document.getElementById("fileElem");
 fileElem.addEventListener("change", () => {
