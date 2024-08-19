@@ -15,7 +15,7 @@
 ![heatmapwithtime_diff.png](https://github.com/user-attachments/assets/4c70259c-9c3a-48af-96e0-941b8088f9b7)
 
 ## MarkerStyleWithTime
-![MarkerStyleWithTime.png](https://github.com/user-attachments/assets/25dd2403-cfc5-407a-9aad-a7998f9e642d)
+![MarkerStyleWithTime.png](https://github.com/user-attachments/assets/4901d79c-3dfc-4ae9-b982-90be2151790c)
 
 * Demo: https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=35.5490,139.6806&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M.geojson&color=red&color=blue
 * URL parameters
