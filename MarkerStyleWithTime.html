@@ -62,6 +62,7 @@ if (jsonurl) {
   fetch(jsonurl).then(res => res.json()).then(json => loadData(json)).catch(console.error);
 }
 const radiuskeyParam = urlParams.get('radiuskey');
+const colors = urlParams.getAll('color');
 
 const fileInput = document.getElementById("fileElem");
 fileElem.addEventListener("change", () => {
@@ -179,9 +180,10 @@ function bindPopupTooltip(feature, layer, valuekeys) {
             data: {
                 // TODO: avoid hard coding: s.substring(11)
                 labels: feature.properties.origTimes.map(s => s.substring(11)),
-                datasets: valuekeys.map(key => ({
+                datasets: valuekeys.map((key, idx) => ({
                     label: key,
                     data: feature.properties[key],
+                    borderColor: colors.length > 0 ? colors[idx % colors.length] : undefined,
                 })),
             },
             options: {
