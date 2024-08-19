@@ -61,6 +61,7 @@ const jsonurl = urlParams.get('jsonurl');
 if (jsonurl) {
   fetch(jsonurl).then(res => res.json()).then(json => loadData(json)).catch(console.error);
 }
+const radiuskeyParam = urlParams.get('radiuskey');
 
 const fileInput = document.getElementById("fileElem");
 fileElem.addEventListener("change", () => {
@@ -73,35 +74,36 @@ fileElem.addEventListener("change", () => {
     //fileElem.value = '';
 });
 
-let tdControl;
+// TODO: customize parameters: duration, autoPlay, ...
+map.timeDimension = L.timeDimension({
+    duration: 'PT30M',
+});
+
+const tdControl = new L.Control.TimeDimensionCustom({
+    autoPlay: true,
+    loopButton: true,
+    minSpeed: 1,
+    speedStep: 0.5,
+    playerOptions: {
+        loop: true,
+        startOver: true,
+    },
+});
+map.addControl(tdControl);
+
 let iconDLayer;
 
 function loadData(data) {
-    if (tdControl) {
-        tdControl._player.stop();
-        tdControl.remove();
-    }
-    map.timeDimension = L.timeDimension({
-        duration: 'PT30M',
-    });
-
-    tdControl = new L.Control.TimeDimensionCustom({
-        autoPlay: true,
-        loopButton: true,
-        minSpeed: 1,
-        speedStep: 0.5,
-        playerOptions: {
-            loop: true,
-            startOver: true,
-        },
-    });
-    map.addControl(tdControl);
 
     // keep original times not to be overridden by millis array by L.TimeDimension.
     data.features.forEach(feature => {
         feature.properties.origTimes = [...feature.properties.times];
     });
     const valuekeys = data.valuekeys || [];
+    let radiuskey = radiuskeyParam;
+    if (radiuskey === null && valuekeys.length > 0) {
+        radiuskey = valuekeys[0];
+    }
 
     if (iconDLayer) {
         iconDLayer.remove();
@@ -109,7 +111,7 @@ function loadData(data) {
     // TODO: make geojson layers for each system_id to control toggle display
     const iconLayer = L.geoJson(data, {
         pointToLayer: (feature, latLng) => {
-            return pointToLayer(feature, latLng, valuekeys.length > 0 ? valuekeys[0] : undefined);
+            return pointToLayer(feature, latLng, radiuskey);
         },
         onEachFeature: (feature, layer) => {
             bindPopupTooltip(feature, layer, valuekeys);
@@ -128,7 +130,7 @@ function loadData(data) {
 }
 
 // based on https://github.com/python-visualization/folium/blob/553a33981fa29a9d4ce6c426563749188906610f/folium/plugins/timestamped_geo_json.py#L102
-function pointToLayer(feature, latLng, valuekey) {
+function pointToLayer(feature, latLng, radiuskey) {
     let iconstyle = feature.properties.iconstyle;
     if (feature.properties.icon == 'marker') {
         if (iconstyle) {
@@ -140,7 +142,7 @@ function pointToLayer(feature, latLng, valuekey) {
     }
     if (feature.properties.icon == 'circle') {
         if (iconstyle) {
-            if (!valuekey) {
+            if (!radiuskey) {
                 return new L.circleMarker(latLng, iconstyle);
             }
             const cur = map.timeDimension.getCurrentTime();
@@ -151,8 +153,8 @@ function pointToLayer(feature, latLng, valuekey) {
             const defradius = iconstyle.radius || 2;
             return new L.circleMarker(latLng, {
                 ...iconstyle,
-                radius: feature.properties[valuekey].at(idx) + defradius,
-                //radius: Math.log2(1 + feature.properties[valuekey].at(idx)) + defradius,
+                radius: feature.properties[radiuskey].at(idx) + defradius,
+                //radius: Math.log2(1 + feature.properties[radiuskey].at(idx)) + defradius,
             });
         }
         return new L.circleMarker(latLng);
