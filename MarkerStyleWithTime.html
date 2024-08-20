@@ -149,7 +149,11 @@ function pointToLayer(feature, latLng, radiuskey) {
             const cur = map.timeDimension.getCurrentTime();
             let idx = -1;
             if (feature.properties.times) { // [Number]
-                idx = feature.properties.times.indexOf(cur);
+                //idx = feature.properties.times.indexOf(cur);
+                idx = feature.properties.times.findIndex((t, i) => {
+                    const tnext = feature.properties.times.at(i + 1);
+                    return (cur >= t && (tnext === undefined || cur < tnext));
+                });
             }
             const defradius = iconstyle.radius || 2;
             return new L.circleMarker(latLng, {
