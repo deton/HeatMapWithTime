@@ -103,8 +103,9 @@ function loadData(text) {
         }
         d.status.forEach(idBikeDock => {
             const [id, bike, dock] = idBikeDock;
-            if (!(id in stations[systemId])) {
-                console.error(indata.ts, systemId, id);
+            if (stations[systemId][id] === undefined) {
+                console.warn(`No station_id(${id}) in station_information. Ignored.`, indata.ts, systemId);
+                return;
             }
             const [lat, lon, name] = stations[systemId][id];
             const featureId = `${systemId} ${id}`;
