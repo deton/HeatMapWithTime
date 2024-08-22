@@ -1,38 +1,49 @@
 function fetchGbfs() {
-  let url = "https://api-public.odpt.org/api/v4/gbfs/docomo-cycle/station_information.json";
+  let url = "https://gbfs.lyft.com/gbfs/2.3/bay/en/station_information.json";
+  //let url = "https://api-public.odpt.org/api/v4/gbfs/docomo-cycle/station_information.json";
   const infoblob = UrlFetchApp.fetch(url).getBlob();
-  url = "https://api-public.odpt.org/api/v4/gbfs/docomo-cycle/station_status.json";
+  url = "https://gbfs.lyft.com/gbfs/2.3/bay/en/station_status.json";
+  //url = "https://api-public.odpt.org/api/v4/gbfs/docomo-cycle/station_status.json";
   const statusblob = UrlFetchApp.fetch(url).getBlob();
 
-  url = "https://api-public.odpt.org/api/v4/gbfs/hellocycling/station_information.json";
+  url = "https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/station_information.json";
+  //url = "https://api-public.odpt.org/api/v4/gbfs/hellocycling/station_information.json";
   const infoblob2 = UrlFetchApp.fetch(url).getBlob();
-  url = "https://api-public.odpt.org/api/v4/gbfs/hellocycling/station_status.json";
+  url = "https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/station_status.json";
+  //url = "https://api-public.odpt.org/api/v4/gbfs/hellocycling/station_status.json";
   const statusblob2 = UrlFetchApp.fetch(url).getBlob();
 
+  const systemId1 = "fgb"; // TODO: get from system_information.json
+  const systemId2 = "Paris";
+  //const systemId1 = "docomo-cycle";
+  //const systemId2 = "hellocycling";
   const date = new Date();
-  const yearmonth = Utilities.formatDate(date, "Asia/Tokyo", "yyyyMM");
-  const day = Utilities.formatDate(date, "Asia/Tokyo", "dd");
-  const hhmm = Utilities.formatDate(date, "Asia/Tokyo", "HHmm");
+  const yearmonth = Utilities.formatDate(date, "UTC", "yyyyMM");
+  const day = Utilities.formatDate(date, "UTC", "dd");
+  const hhmm = Utilities.formatDate(date, "UTC", "HHmm");
 
   const topFolder = getOrCreateFolder(DriveApp.getRootFolder(), "gbfs");
   const ymFolder = getOrCreateFolder(topFolder, yearmonth);
   const dayFolder = getOrCreateFolder(ymFolder, day);
 
-  // save original gbfs files.
-  //infoblob.setName(`${hhmm}docomo-cycle_${infoblob.getName()}`);
-  //statusblob.setName(`${hhmm}docomo-cycle_${statusblob.getName()}`);
-  //infoblob2.setName(`${hhmm}hellocycling_${infoblob2.getName()}`);
-  //statusblob2.setName(`${hhmm}hellocycling_${statusblob2.getName()}`);
-  //const zip = Utilities.zip([infoblob, statusblob, infoblob2, statusblob2], `${hhmm}.zip`);
+  //infoblob.setName(`${hhmm}${systemId1}_${infoblob.getName()}`);
+  //statusblob.setName(`${hhmm}${systemId1}_${statusblob.getName()}`);
+  //infoblob2.setName(`${hhmm}${systemId2}_${infoblob2.getName()}`);
+  //statusblob2.setName(`${hhmm}${systemId2}_${statusblob2.getName()}`);
+  //const zip = Utilities.zip([infoblob, statusblob, infoblob2, statusblob2], `${hhmm}${systemId1}_${systemId2}.zip`);
   //dayFolder.createFile(zip);
 
-  const ts = Utilities.formatDate(date, "Asia/Tokyo", "yyyy-MM-dd'T'HH:mm");
-  // XXX: run every 5 minutes.
-  const mindata = minidata(ts, 'docomo-cycle', statusblob, hhmm <= "0005" ? infoblob : undefined);
-  const mindata2 = minidata(ts, 'hellocycling', statusblob2, hhmm <= "0005" ? infoblob2 : undefined);
+  const timezone1 = "America/Los_Angeles"; //"Asia/Tokyo"; // TODO: get from system_information.json
+  const timezone2 = "Europe/Paris";
+  const ts1 = Utilities.formatDate(date, timezone1, "yyyy-MM-dd'T'HH:mm");
+  const ts2 = Utilities.formatDate(date, timezone2, "yyyy-MM-dd'T'HH:mm");
+  const hhmm1 = Utilities.formatDate(date, timezone1, "HHmm");
+  const mindata = minidata(ts1, systemId1, statusblob, hhmm1 <= "0005" ? infoblob : undefined);
+  const hhmm2 = Utilities.formatDate(date, timezone2, "HHmm");
+  const mindata2 = minidata(ts2, systemId2, statusblob2, hhmm2 <= "0005" ? infoblob2 : undefined);
   const ndjson = [JSON.stringify(mindata), JSON.stringify(mindata2)].join('\n') + '\n';
   const minblob = Utilities.newBlob(ndjson, 'application/x-ndjson');
-  const minblobgz = Utilities.gzip(minblob, `${hhmm}.ndjson.gz`);
+  const minblobgz = Utilities.gzip(minblob, `${hhmm}${systemId1}_${systemId2}.ndjson.gz`);
   const dayFolder2 = getOrCreateFolder(ymFolder, `${day}-ndjson`);
   dayFolder2.createFile(minblobgz);
 }
