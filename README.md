@@ -19,6 +19,7 @@
 
 * Demo: https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=35.5490,139.6806&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M.geojson&color=red&color=blue
 * Demo2: https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=37.7662,-122.3854&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata2/fgb-0821-PT30M.geojson&color=red&color=blue
+* Demo3: https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=48.8557,2.3334&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata3/Paris-0822-PT30M.geojson&color=red&color=blue
 * URL parameters
   * latlon: map center. (default: fitBounds() for geojson)
   * zoom (default: 13). zoom is ignored if latlon is not specified.
@@ -46,4 +47,5 @@
   * These sample data use the following copyrighted material with modifications.
     * DOCOMO BIKESHARE, INC. / Association for Open Data of Public Transportation, [Bikeshare information of DOCOMO BIKESHARE, INC.](https://ckan.odpt.org/dataset/c_bikeshare_gbfs-d-nationwide-bikeshare), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.en).
     * OpenStreet Corp. / Association for Open Data of Public Transportation, [Bikeshare information of OpenStreet](https://ckan.odpt.org/dataset/c_bikeshare_gbfs-openstreet), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.en), [ODC BY 1.0](https://opendatacommons.org/licenses/by/1-0/), [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/).
-* sampledata2/ : [Bay Wheels](https://www.baywheels.com/)
+* sampledata2/ : Bay Wheels
+* sampledata3/ : Vélib' Metropole
