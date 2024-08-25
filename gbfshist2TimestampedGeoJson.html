@@ -102,7 +102,7 @@ function loadData(text) {
             stations[systemId] = d.stations;
         }
         d.status.forEach(idBikeDock => {
-            const [id, bike, dock] = idBikeDock;
+            const [id, bike, dock, capacity] = idBikeDock;
             if (stations[systemId][id] === undefined) {
                 console.warn(`No station_id(${id}) in station_information. Ignored.`, indata.ts, systemId);
                 return;
@@ -125,6 +125,7 @@ function loadData(text) {
                         times: [],
                         bikes: [],
                         docks: [],
+                        capacity: capacity === undefined ? undefined : [],
                         icon: 'circle',
                         iconstyle: {
                             color: systemId === 'hellocycling' ? '#fabe00' : '#cc0033',
@@ -136,13 +137,20 @@ function loadData(text) {
             features[featureId].properties.times.push(indata.ts);
             features[featureId].properties.bikes.push(bike);
             features[featureId].properties.docks.push(dock);
+            if (capacity !== undefined) {
+                features[featureId].properties.capacity.push(capacity);
+            }
         });
     });
-    return {
+    const geojson = {
         type: 'FeatureCollection',
         valuekeys: ['bikes', 'docks'],
         features: Object.values(features)
     };
+    if (geojson.features[0].properties.capacity !== undefined) {
+        geojson.valuekeys.push('capacity');
+    }
+    return geojson;
 }
 </script>
 </html>

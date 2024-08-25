@@ -17,9 +17,10 @@
 ## MarkerStyleWithTime
 ![MarkerStyleWithTime.png](https://github.com/user-attachments/assets/4901d79c-3dfc-4ae9-b982-90be2151790c)
 
-* Demo: https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=35.5490,139.6806&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M.geojson&color=red&color=blue
-* Demo2: https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=37.7662,-122.3854&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata2/fgb-0821-PT30M.geojson&color=red&color=blue
-* Demo3: https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=48.8557,2.3334&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata3/Paris-0822-PT30M.geojson&color=red&color=blue
+* Demo1 (Kawasaki GBFS): https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=35.5490,139.6806&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M.geojson&color=red&color=blue
+* Demo1 (with capacity line): https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=35.5490,139.6806&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M-capacity.geojson&color=red&color=blue&color=green
+* Demo2 (San Francisco GBFS): https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=37.7662,-122.3854&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata2/fgb-0821-PT30M.geojson&color=red&color=blue
+* Demo3 (Paris GBFS): https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=48.8557,2.3334&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata3/Paris-0822-PT30M.geojson&color=red&color=blue
 * URL parameters
   * latlon: map center. (default: fitBounds() for geojson)
   * zoom (default: 13). zoom is ignored if latlon is not specified.
@@ -40,6 +41,8 @@
   * Sample output: sampledata/15-PT30M.geojson
 * fetchGbfs.gs: Google Apps Script to fetch GBFS files and save gbfshist.ndjson (run every 5 minutes)
   * Sample output: sampledata/15-PT30M.ndjson
+* gbfs2hist.py: Make gbfshist.ndjson from GBFS files.
+  * Sample output: sampledata/15-PT30M-capacity.ndjson
 
 ## License
 * html files are distributed under the terms of the MIT license.
