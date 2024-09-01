@@ -40,6 +40,7 @@
   * zoom (default: 10)
   * pitch (default: 20)
   * [radius](https://deck.gl/docs/api-reference/aggregation-layers/hexagon-layer#radius) (default: 500)
+  * [elevationScale](https://deck.gl/docs/api-reference/aggregation-layers/hexagon-layer#elevationscale) (default: 20)
   * intervalMs: animation timer interval in milliseconds. (default: 1000)
   * jsonurl: heatmap json URL to load
 

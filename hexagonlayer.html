@@ -32,16 +32,16 @@
     </div>
     <script type="text/javascript">
 const urlParams = new URLSearchParams(document.location.search);
+let latlon = [35.6434, 139.7612];
 let latlonParam = urlParams.get('latlon');
 if (latlonParam) {
     latlon = latlonParam.split(',').map(Number);
-} else {
-    latlon = [35.6434, 139.7612];
 }
 let zoom = +urlParams.get('zoom') || 10;
 let pitch = urlParams.has('pitch') ? +urlParams.get('pitch') : 20; // allow 0
 let interval = +urlParams.get('intervalMs') || 1000;
 let radius = +urlParams.get('radius') || 500;
+let elevationScale = +urlParams.get('elevationScale') || 20;
 const jsonurl = urlParams.get('jsonurl') || 'https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M.json';
 fetch(jsonurl).then(res => res.json()).then(json => loadData(json)).catch(console.error);
 
@@ -128,7 +128,7 @@ function renderLayer(series) {
             getElevationWeight: d => d[2],
             elevationAggregation: 'SUM',
             getPosition: d => [d[1], d[0]],
-            elevationScale: 20,
+            elevationScale: elevationScale,
             radius: radius, // [m]
             coverage: 0.7,
             extruded: true,
