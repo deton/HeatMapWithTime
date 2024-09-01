@@ -1,0 +1,143 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <script src="https://unpkg.com/deck.gl@^9.0.0/dist.min.js"></script>
+    <script src='https://unpkg.com/maplibre-gl@3.0.0/dist/maplibre-gl.js'></script>
+    <link href='https://unpkg.com/maplibre-gl@3.0.0/dist/maplibre-gl.css' rel='stylesheet' />
+    <style type="text/css">
+    body {margin: 0; padding: 0;}
+    #map {width: 100vw; height: 100vh;}
+    .map-overlay {
+        position: absolute;
+        width: 25%;
+        top: 0;
+        left: 0;
+        padding: 10px;
+    }
+    .map-overlay #label {color: #fff;}
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div class="map-overlay top">
+        <div class="map-overlay-inner">
+            <input id="slider" type="range" min="0" value="0" />
+        </div>
+        <div class="map-overlay-inner">
+            <button id="pauseButton">&#x23f8;</button>
+            <button id="playButton">&#x25b6;</button>
+        </div>
+        <div id="label"></div>
+    </div>
+    <script type="text/javascript">
+const urlParams = new URLSearchParams(document.location.search);
+let latlonParam = urlParams.get('latlon');
+if (latlonParam) {
+    latlon = latlonParam.split(',').map(Number);
+} else {
+    latlon = [35.6434, 139.7612];
+}
+let zoom = +urlParams.get('zoom') || 10;
+let pitch = urlParams.has('pitch') ? +urlParams.get('pitch') : 20; // allow 0
+let interval = +urlParams.get('intervalMs') || 1000;
+let radius = +urlParams.get('radius') || 500;
+const jsonurl = urlParams.get('jsonurl') || 'https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M.json';
+fetch(jsonurl).then(res => res.json()).then(json => loadData(json)).catch(console.error);
+
+const slider = document.getElementById("slider");
+const pauseButton = document.getElementById("pauseButton");
+const playButton = document.getElementById("playButton");
+
+pauseButton.onclick = stopTimer;
+let timerId;
+function stopTimer() {
+    clearInterval(timerId);
+}
+
+const deckgl = new deck.DeckGL({
+    container: 'map',
+    mapStyle: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+    initialViewState: {
+        longitude: latlon[1],
+        latitude: latlon[0],
+        zoom: zoom,
+        pitch: pitch,
+    },
+    controller: true,
+});
+
+let timeIdx = 0;
+let curtime;
+function loadData(json) {
+    stopTimer();
+
+    if (!latlonParam) {
+        latlon = Object.values(json.series)[0][0][0]; // TODO: calc bounds
+        deckgl.setProps({
+            initialViewState: {
+                longitude: latlon[1],
+                latitude: latlon[0],
+                zoom: zoom,
+                pitch: pitch,
+            },
+        });
+    }
+
+    slider.max = String(json.times.length - 1);
+    slider.oninput = onSliderValueChange;
+    function onSliderValueChange(ev) {
+        timeIdx = Number(ev.target.value);
+        update();
+    }
+    function update() {
+        curtime = json.times[timeIdx];
+        document.getElementById("label").textContent = curtime;
+        renderLayer(json.series);
+    }
+
+    playButton.onclick = startTimer;
+    function startTimer() {
+        stopTimer();
+        timerId = setInterval(() => {
+            if (timeIdx >= json.times.length) {
+                stopTimer();
+            } else {
+                slider.value = String(timeIdx);
+                update();
+                timeIdx++;
+            }
+        }, interval);
+    }
+    startTimer();
+}
+
+const COLOR_RANGES = [
+    [[254,229,217], [252,187,161], [252,146,114], [251,106,74], [222,45,38], [165,15,21]], // 6-class Reds
+    [[237,248,233], [199,233,192], [161,217,155], [116,196,118], [49,163,84], [0,109,44]], // 6-class Greens
+];
+
+function renderLayer(series) {
+    const layers = Object.values(series).map((data, idx) => {
+        return new deck.HexagonLayer({
+            id: `gridlayer${idx}`,
+            data: data[timeIdx],
+            colorRange: COLOR_RANGES[idx % COLOR_RANGES.length],
+            getColorWeight: d => d[2],
+            colorAggregation: 'SUM',
+            getElevationWeight: d => d[2],
+            elevationAggregation: 'SUM',
+            getPosition: d => [d[1], d[0]],
+            elevationScale: 20,
+            radius: radius, // [m]
+            coverage: 0.7,
+            extruded: true,
+        });
+    });
+    deckgl.setProps({
+        layers: layers,
+    });
+}
+    </script>
+</body>
+</html>

@@ -4,6 +4,7 @@
 * MarkerStyleWithTime:
   * Change radius of circle marker with Leaflet.TimeDimension (based on folium.plugins.TimestampedGeoJson)
   * Line chart in marker popup
+* HexagonLayer: deck.gl HexagonLayer with time slider for heatmap json data
 
 ## HeatMapWithTime
 * [heatmapwithtime.html](https://deton.github.io/HeatMapWithTime/heatmapwithtime.html?latlon=35.5490,139.6806&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M.json)
@@ -28,6 +29,17 @@
   * radiuskey: key in feature.properties to change radius of circle marker
     * (default: .valuekeys[0] in geojson)
   * color: line colors in line chart in marker popup (default: [Chart.js color palette](https://www.chartjs.org/docs/latest/general/colors.html#default-color-palette))
+
+## HexagonLayer
+* [hexagonlayer.html](https://deton.github.io/HeatMapWithTime/hexagonlayer.html?latlon=35.6434,139.7612&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M.json)
+
+* URL parameters
+  * latlon: map center. (default: first latlon in json data)
+  * zoom (default: 10)
+  * pitch (default: 20)
+  * [radius](https://deck.gl/docs/api-reference/aggregation-layers/hexagon-layer#radius) (default: 500)
+  * intervalMs: animation timer interval in milliseconds. (default: 1000)
+  * jsonurl: heatmap json URL to load
 
 ## Other files
 * [gbfshist2heatmap.html](https://deton.github.io/HeatMapWithTime/gbfshist2heatmap.html): Make heatmap json for heatmapwithtime.html from gbfshist.ndjson
