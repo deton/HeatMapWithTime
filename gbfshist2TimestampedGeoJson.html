@@ -124,7 +124,7 @@ function loadData(text) {
                         //name: name, // XXX: not include to reduce geojson size
                         times: [],
                         bikes: [],
-                        docks: [],
+                        docks: dock === undefined ? undefined : [],
                         capacity: capacity === undefined ? undefined : [],
                         icon: 'circle',
                         iconstyle: {
@@ -136,7 +136,9 @@ function loadData(text) {
             }
             features[featureId].properties.times.push(indata.ts);
             features[featureId].properties.bikes.push(bike);
-            features[featureId].properties.docks.push(dock);
+            if (dock !== undefined) {
+                features[featureId].properties.docks.push(dock);
+            }
             if (capacity !== undefined) {
                 features[featureId].properties.capacity.push(capacity);
             }
@@ -144,9 +146,12 @@ function loadData(text) {
     });
     const geojson = {
         type: 'FeatureCollection',
-        valuekeys: ['bikes', 'docks'],
+        valuekeys: ['bikes'],
         features: Object.values(features)
     };
+    if (geojson.features[0].properties.docks !== undefined) {
+        geojson.valuekeys.push('docks');
+    }
     if (geojson.features[0].properties.capacity !== undefined) {
         geojson.valuekeys.push('capacity');
     }
