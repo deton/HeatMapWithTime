@@ -39,8 +39,14 @@
   * latlon: map center. (default: first latlon in json data)
   * zoom (default: 10)
   * pitch (default: 20)
+  * [mapStyle](https://deck.gl/docs/api-reference/core/deckgl#mapstyle) (default: `https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json`)
   * [radius](https://deck.gl/docs/api-reference/aggregation-layers/hexagon-layer#radius) (default: 500)
   * [elevationScale](https://deck.gl/docs/api-reference/aggregation-layers/hexagon-layer#elevationscale) (default: 20)
+  * colorRanges: array of [colorRange](https://deck.gl/docs/api-reference/aggregation-layers/hexagon-layer#colorrange)
+    * (default: [
+        [[165,15,21],[222,45,38],[251,106,74],[252,146,114],[252,187,161],[254,229,217]],
+        [[0,109,44],[49,163,84],[116,196,118],[161,217,155],[199,233,192],[237,248,233]]
+      ]) (6-class Reds reverse, 6-class Greens reverse)
   * intervalMs: animation timer interval in milliseconds. (default: 1000)
   * jsonurl: heatmap json URL to load
 
