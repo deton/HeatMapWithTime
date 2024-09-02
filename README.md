@@ -33,7 +33,7 @@
 ## HexagonLayer
 * [hexagonlayer.html](https://deton.github.io/HeatMapWithTime/hexagonlayer.html?latlon=35.6434,139.7612&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M.json)
 
-![hexagonlayer.png](https://github.com/user-attachments/assets/114b546f-0114-4341-bdee-b1a436af7428)
+![hexagonlayer.png](https://github.com/user-attachments/assets/83a835a8-48ab-4d8f-b830-a20a125e0ca0)
 
 * URL parameters
   * latlon: map center. (default: first latlon in json data)
