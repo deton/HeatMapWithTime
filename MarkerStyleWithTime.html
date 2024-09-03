@@ -63,6 +63,7 @@ if (jsonurl) {
 }
 const radiuskeyParam = urlParams.get('radiuskey');
 const colors = urlParams.getAll('color');
+const filter0 = urlParams.get('filter') === '0';
 
 const fileInput = document.getElementById("fileElem");
 fileElem.addEventListener("change", () => {
@@ -95,7 +96,6 @@ map.addControl(tdControl);
 let iconDLayer;
 
 function loadData(data) {
-
     // keep original times not to be overridden by millis array by L.TimeDimension.
     data.features.forEach(feature => {
         feature.properties.origTimes = [...feature.properties.times];
@@ -110,14 +110,29 @@ function loadData(data) {
         iconDLayer.remove();
     }
     // TODO: make geojson layers for each system_id to control toggle display
-    const iconLayer = L.geoJson(data, {
+    const geojsonOptions = {
         pointToLayer: (feature, latLng) => {
             return pointToLayer(feature, latLng, radiuskey);
         },
         onEachFeature: (feature, layer) => {
             bindPopupTooltip(feature, layer, valuekeys);
-        }
-    });
+        },
+    };
+    if (filter0) { // show only features with radiuskey value === 0
+        geojsonOptions.filter = (feature) => {
+            const cur = map.timeDimension.getCurrentTime();
+            let idx = -1;
+            if (feature.properties.times) { // [Number]
+                //idx = feature.properties.times.indexOf(cur);
+                idx = feature.properties.times.findIndex((t, i) => {
+                    const tnext = feature.properties.times.at(i + 1);
+                    return (cur >= t && (tnext === undefined || cur < tnext));
+                });
+            }
+            return feature.properties[radiuskey].at(idx) === 0;
+        };
+    }
+    const iconLayer = L.geoJson(data, geojsonOptions);
     if (!latlon) {
         map.fitBounds(iconLayer.getBounds());
     }

@@ -29,6 +29,8 @@
   * radiuskey: key in feature.properties to change radius of circle marker
     * (default: .valuekeys[0] in geojson)
   * color: line colors in line chart in marker popup (default: [Chart.js color palette](https://www.chartjs.org/docs/latest/general/colors.html#default-color-palette))
+  * filter: filter config.
+    * `0`: show only features with radiuskey value === 0.
 
 ## HexagonLayer
 * [hexagonlayer.html](https://deton.github.io/HeatMapWithTime/hexagonlayer.html?latlon=35.6434,139.7612&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M.json)
