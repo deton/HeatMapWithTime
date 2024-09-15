@@ -68,7 +68,8 @@
   * Sample output: sampledata/15-PT30M-capacity.ndjson
 
 ## License
-* html files are distributed under the terms of the MIT license.
+* html and *.{py,gs} script files are distributed under the terms of the MIT license.
+* Icons (`close_{blue,red}.svg`) are from [Material Symbols](https://fonts.google.com/icons), licensed under Apache License Version 2.0.
 * sampledata/ used in the demo:
   * These sample data use the following copyrighted material with modifications.
     * DOCOMO BIKESHARE, INC. / Association for Open Data of Public Transportation, [Bikeshare information of DOCOMO BIKESHARE, INC.](https://ckan.odpt.org/dataset/c_bikeshare_gbfs-d-nationwide-bikeshare), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.en).

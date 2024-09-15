@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width,
+    initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Make TimestampedGeoJson data</title>
+</head>
+<body>
+<h1>Make TimestampedGeoJson data</h1>
+<div id="toolbar">
+    Load input data: <input type="file" id="fileElem" accept=".ndjson" multiple />
+</div>
+
+<h2>Input data format</h2>
+<p>
+Input JSON format on each NDJSON line:
+<ul>
+    <li>ts: Time stamp label (in any format)</li>
+    <li>system_id: system_id from system_information.json</li>
+    <li>status: Array of [station_id, num_bikes_available, num_docks_available] from station_status.json</li>
+    <li>stations (Optional): {station_id: [lat,lon,name], ...} from station_information.json</li>
+</ul>
+</p>
+
+<p>
+Input data example:
+</p>
+<pre>
+{"ts":"2024-08-15T00:02","system_id":"docomo-cycle","status":[["00000001",4,16],["00000002",0,6],...],"stations":{"00000001":[38.269793,140.874203,"04.ドコモ東北ビル"],...}}
+{"ts":"2024-08-15T00:02","system_id":"hellocycling","status":[["17",2,6],["26",10,0],...],"stations":{"17":[35.707252,139.777587,"新御徒町ステーション"],...}}
+{"ts":"2024-08-15T00:32","system_id":"docomo-cycle","status":[["00000001",5,15],["00000002",0,6],...]}
+{"ts":"2024-08-15T00:32","system_id":"hellocycling","status":[["17",2,6],["26",10,0],...]}
+...
+</pre>
+
+<h2>Output data format</h2>
+GeoJSON with times property (same as folium.plugins.TimestampedGeoJson).
+
+<p>
+Output data example:
+</p>
+<pre>
+{
+    "type": "FeatureCollection",
+    "valuekeys": ["bikes", "docks"],
+    "features": [{
+        "type": "Feature",
+        "geometry": {
+            "type": "Point",
+            "coordinates": [140.874203, 38.269793]
+        },
+        "properties": {
+            "popup": "docomo-cycle 00000001",
+            "times": ["2024-08-15T00:02", "2024-08-15T00:32", ...]
+            "bikes": [4, 5, ...],
+            "docks": [16, 15, ...]
+        }
+    }, ...]
+}
+</pre>
+</body>
+<script>
+const fileInput = document.getElementById("fileElem");
+fileElem.addEventListener("change", () => {
+    Array.from(fileElem.files).forEach(file => {
+        file.text().then(text => {
+            const result = loadData(text);
+            const outfname = file.name.replace(/\.ndjson$/, '.geojson');
+            const outfile = new File([JSON.stringify(result)], outfname, {
+              type: 'application/geo+json'
+            });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(outfile);
+            a.download = outfile.name;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }).catch(console.error);
+    });
+    //fileElem.value = '';
+});
+
+function loadData(text) {
+    const stations = {};
+    const features = {}; // output
+    text.split('\n').filter(x => x).forEach((line, lnum) => {
+        let indata;
+        try {
+            indata = JSON.parse(line);
+        } catch (err) {
+            console.error(err, lnum, line);
+        }
+        //const timems = Date.parse(indata.ts);
+
+        const systemId = indata.system_id;
+        if (!(systemId in stations)) {
+            stations[systemId] = {};
+        }
+
+        const d = indata;
+        if (d.stations) {
+            stations[systemId] = d.stations;
+        }
+        d.status.forEach(idBikeDock => {
+            const [id, bike, dock, capacity] = idBikeDock;
+            if (stations[systemId][id] === undefined) {
+                console.warn(`No station_id(${id}) in station_information. Ignored.`, indata.ts, systemId);
+                return;
+            }
+            const [lat, lon, name] = stations[systemId][id];
+            const featureId = `${systemId} ${id}`;
+            if (!(featureId in features)) {
+                features[featureId] = {
+                    type: 'Feature',
+                    //id: featureId, // XXX: L.TimeDimension do not copy this
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [lon, lat],
+                    },
+                    properties: {
+                        popup: featureId,
+                        //system_id: systemId,
+                        //station_id: id,
+                        //name: name, // XXX: not include to reduce geojson size
+                        times: [],
+                        bikes: [],
+                        docks: dock === undefined ? undefined : [],
+                        capacity: capacity === undefined ? undefined : [],
+                        icon: 'circle',
+                        iconstyle: {
+                            color: systemId === 'hellocycling' ? '#fabe00' : '#cc0033',
+                            radius: 2,
+                        },
+                        iconstyle0: { // use 'marker' icon for radius === 0
+                            iconUrl: systemId === 'hellocycling' ? 'https://deton.github.io/HeatMapWithTime/close_blue.svg' : 'https://deton.github.io/HeatMapWithTime/close_red.svg',
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12],
+                        },
+                    }
+                };
+            }
+            features[featureId].properties.times.push(indata.ts);
+            features[featureId].properties.bikes.push(bike);
+            if (dock !== undefined) {
+                features[featureId].properties.docks.push(dock);
+            }
+            if (capacity !== undefined) {
+                features[featureId].properties.capacity.push(capacity);
+            }
+        });
+    });
+    const geojson = {
+        type: 'FeatureCollection',
+        valuekeys: ['bikes'],
+        features: Object.values(features)
+    };
+    if (geojson.features[0].properties.docks !== undefined) {
+        geojson.valuekeys.push('docks');
+    }
+    if (geojson.features[0].properties.capacity !== undefined) {
+        geojson.valuekeys.push('capacity');
+    }
+    return geojson;
+}
+</script>
+</html>
