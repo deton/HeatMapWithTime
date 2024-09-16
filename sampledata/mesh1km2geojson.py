@@ -26,11 +26,11 @@ for line in fileinput.input():
 # DATE = f"{YEAR}-{MONTH}-{DAY}"
 DATE = f"2024-{MONTH}-{DAY}"  # XXX:マージして表示するGBFSデータの日付に合わせる
 TIMES = [
-    f"{DATE}T00:00",  # 終日 平均値を使用
-    f"{DATE}T01:00",  # 深夜
-    f"{DATE}T05:00",  # 終日
-    f"{DATE}T11:00",  # 昼
-    f"{DATE}T15:00",  # 終日
+    f"{DATE}T00:02",  # 終日 平均値を使用  # XXX: GBFSデータの時刻に合わせて02
+    f"{DATE}T01:02",  # 深夜
+    f"{DATE}T05:02",  # 終日
+    f"{DATE}T11:02",  # 昼
+    f"{DATE}T15:02",  # 終日
 ]
 features = []
 for meshcode, v in meshdata.items():
