@@ -29,6 +29,9 @@
   * radiuskey: key in feature.properties to change radius of circle marker
     * (default: .valuekeys[0] in geojson)
   * opacitykey: key in feature.properties to change fillOpacity of Polygon.
+  * opacityRange: Use opacitykey value's min and max value in this range.
+    * `attime`: min and max at each time.
+    * (default: `all`: min and max thorough all time range)
   * color: line colors in line chart in marker popup (default: [Chart.js color palette](https://www.chartjs.org/docs/latest/general/colors.html#default-color-palette))
   * filter: filter config.
     * `0`: show only features with radiuskey value === 0.

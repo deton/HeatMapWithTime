@@ -63,6 +63,7 @@ if (jsonurl) {
 }
 const radiuskeyParam = urlParams.get('radiuskey');
 const opacitykey = urlParams.get('opacitykey');
+const opacityRange = urlParams.get('opacityRange') || 'all';
 const colors = urlParams.getAll('color');
 const filter0 = urlParams.get('filter') === '0';
 
@@ -101,22 +102,39 @@ function loadData(data) {
     data.features.forEach(feature => {
         feature.properties.origTimes = [...feature.properties.times];
     });
-    let opacitykeyMax = -Infinity;
-    let opacitykeyMin = +Infinity;
-    if (opacitykey) {
-        data.features.forEach(feature => {
-            if (opacitykey in feature.properties) {
-                opacitykeyMax = Math.max(opacitykeyMax,
-                    Math.max(...feature.properties[opacitykey]));
-                opacitykeyMin = Math.min(opacitykeyMin,
-                    Math.min(...feature.properties[opacitykey]));
-            }
-        });
-    }
     const valuekeys = data.valuekeys || [];
     let radiuskey = radiuskeyParam;
     if (radiuskey === null && valuekeys.length > 0) {
         radiuskey = valuekeys[0];
+    }
+    const opacityCfg = {
+        key: opacitykey,
+        range: opacityRange,
+        min: +Infinity,
+        max: -Infinity,
+        timesMin: [],
+        timesMax: [],
+    };
+    if (opacitykey) {
+        data.features.forEach(feature => {
+            if (opacitykey in feature.properties) {
+                const values = feature.properties[opacitykey];
+                if (opacityCfg.timesMin.length === 0) {
+                    opacityCfg.timesMin = values.map(_ => +Infinity);
+                    opacityCfg.timesMax = values.map(_ => -Infinity);
+                }
+                for (let i = 0; i < values.length; i++) {
+                    if (values[i] < opacityCfg.timesMin[i]) {
+                        opacityCfg.timesMin[i] = values[i];
+                    }
+                    if (values[i] > opacityCfg.timesMax[i]) {
+                        opacityCfg.timesMax[i] = values[i];
+                    }
+                }
+            }
+        });
+        opacityCfg.min = Math.min(...opacityCfg.timesMin);
+        opacityCfg.max = Math.max(...opacityCfg.timesMax);
     }
 
     if (iconDLayer) {
@@ -131,7 +149,7 @@ function loadData(data) {
             bindPopupTooltip(feature, layer, valuekeys);
         },
         style: (feature) => {
-            return styleFunc(feature, opacitykey, opacitykeyMin, opacitykeyMax);
+            return styleFunc(feature, opacityCfg);
         }
     };
     if (filter0) { // show only features with radiuskey value === 0
@@ -246,15 +264,21 @@ function bindPopupTooltip(feature, layer, valuekeys) {
     });
 }
 
-function styleFunc(feature, opacitykey, min, max) {
+function styleFunc(feature, opacityCfg) {
     if (!feature.properties.style) {
         return {};
     }
-    if (!opacitykey) {
+    if (!opacityCfg.key) {
         return feature.properties.style;
     }
     const idx = getTimeIdx(feature.properties.times);
-    const v = feature.properties[opacitykey].at(idx);
+    const v = feature.properties[opacityCfg.key].at(idx);
+    let min = opacityCfg.min;
+    let max = opacityCfg.max;
+    if (opacityCfg.range === 'attime') {
+        min = opacityCfg.timesMin[idx];
+        max = opacityCfg.timesMax[idx];
+    }
     const opacity = (v - min) / (max - min); // min-max scaling
     return {
         ...feature.properties.style,
