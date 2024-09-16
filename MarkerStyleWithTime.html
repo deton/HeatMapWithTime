@@ -62,6 +62,8 @@ if (jsonurl) {
   fetch(jsonurl).then(res => res.json()).then(json => loadData(json)).catch(console.error);
 }
 const radiuskeyParam = urlParams.get('radiuskey');
+const opacitykey = urlParams.get('opacitykey');
+const opacityRange = urlParams.get('opacityRange') || 'all';
 const colors = urlParams.getAll('color');
 const filter0 = urlParams.get('filter') === '0';
 
@@ -105,6 +107,35 @@ function loadData(data) {
     if (radiuskey === null && valuekeys.length > 0) {
         radiuskey = valuekeys[0];
     }
+    const opacityCfg = {
+        key: opacitykey,
+        range: opacityRange,
+        min: +Infinity,
+        max: -Infinity,
+        timesMin: [],
+        timesMax: [],
+    };
+    if (opacitykey) {
+        data.features.forEach(feature => {
+            if (opacitykey in feature.properties) {
+                const values = feature.properties[opacitykey];
+                if (opacityCfg.timesMin.length === 0) {
+                    opacityCfg.timesMin = values.map(_ => +Infinity);
+                    opacityCfg.timesMax = values.map(_ => -Infinity);
+                }
+                for (let i = 0; i < values.length; i++) {
+                    if (values[i] < opacityCfg.timesMin[i]) {
+                        opacityCfg.timesMin[i] = values[i];
+                    }
+                    if (values[i] > opacityCfg.timesMax[i]) {
+                        opacityCfg.timesMax[i] = values[i];
+                    }
+                }
+            }
+        });
+        opacityCfg.min = Math.min(...opacityCfg.timesMin);
+        opacityCfg.max = Math.max(...opacityCfg.timesMax);
+    }
 
     if (iconDLayer) {
         iconDLayer.remove();
@@ -117,18 +148,13 @@ function loadData(data) {
         onEachFeature: (feature, layer) => {
             bindPopupTooltip(feature, layer, valuekeys);
         },
+        style: (feature) => {
+            return styleFunc(feature, opacityCfg);
+        }
     };
     if (filter0) { // show only features with radiuskey value === 0
         geojsonOptions.filter = (feature) => {
-            const cur = map.timeDimension.getCurrentTime();
-            let idx = -1;
-            if (feature.properties.times) { // [Number]
-                //idx = feature.properties.times.indexOf(cur);
-                idx = feature.properties.times.findIndex((t, i) => {
-                    const tnext = feature.properties.times.at(i + 1);
-                    return (cur >= t && (tnext === undefined || cur < tnext));
-                });
-            }
+            const idx = getTimeIdx(feature.properties.times);
             return feature.properties[radiuskey].at(idx) === 0;
         };
     }
@@ -159,7 +185,7 @@ function pointToLayer(feature, latLng, radiuskey) {
     if (feature.properties.icon == 'circle') {
         let iconstyle0 = feature.properties.iconstyle0;
         if (iconstyle0 && radiuskey) {
-            const idx = getIdx();
+            const idx = getTimeIdx(feature.properties.times);
             const radius = feature.properties[radiuskey].at(idx);
             if (radius === 0) {
                 return new L.Marker(latLng, {
@@ -171,7 +197,7 @@ function pointToLayer(feature, latLng, radiuskey) {
             if (!radiuskey) {
                 return new L.circleMarker(latLng, iconstyle);
             }
-            const idx = getIdx();
+            const idx = getTimeIdx(feature.properties.times);
             const defradius = iconstyle.radius || 2;
             return new L.circleMarker(latLng, {
                 ...iconstyle,
@@ -182,19 +208,19 @@ function pointToLayer(feature, latLng, radiuskey) {
         return new L.circleMarker(latLng);
     }
     return new L.Marker(latLng);
+}
 
-    function getIdx() {
-        const cur = map.timeDimension.getCurrentTime();
-        let idx = -1;
-        if (feature.properties.times) { // [Number]
-            //idx = feature.properties.times.indexOf(cur);
-            idx = feature.properties.times.findIndex((t, i) => {
-                const tnext = feature.properties.times.at(i + 1);
-                return (cur >= t && (tnext === undefined || cur < tnext));
-            });
-        }
-        return idx;
+function getTimeIdx(featureTimes) {
+    const cur = map.timeDimension.getCurrentTime();
+    let idx = -1;
+    if (featureTimes) { // [Number]
+        //idx = featureTimes.indexOf(cur);
+        idx = featureTimes.findIndex((t, i) => {
+            const tnext = featureTimes.at(i + 1);
+            return (cur >= t && (tnext === undefined || cur < tnext));
+        });
     }
+    return idx;
 }
 
 function bindPopupTooltip(feature, layer, valuekeys) {
@@ -236,6 +262,28 @@ function bindPopupTooltip(feature, layer, valuekeys) {
         maxWidth: 400,
         maxHeight: 300,
     });
+}
+
+function styleFunc(feature, opacityCfg) {
+    if (!feature.properties.style) {
+        return {};
+    }
+    if (!opacityCfg.key) {
+        return feature.properties.style;
+    }
+    const idx = getTimeIdx(feature.properties.times);
+    const v = feature.properties[opacityCfg.key].at(idx);
+    let min = opacityCfg.min;
+    let max = opacityCfg.max;
+    if (opacityCfg.range === 'attime') {
+        min = opacityCfg.timesMin[idx];
+        max = opacityCfg.timesMax[idx];
+    }
+    const opacity = (v - min) / (max - min); // min-max scaling
+    return {
+        ...feature.properties.style,
+        fillOpacity: opacity,
+    };
 }
 </script>
 </html>

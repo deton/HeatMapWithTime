@@ -28,6 +28,10 @@
   * jsonurl: geojson URL to load
   * radiuskey: key in feature.properties to change radius of circle marker
     * (default: .valuekeys[0] in geojson)
+  * opacitykey: key in feature.properties to change fillOpacity of Polygon.
+  * opacityRange: Use opacitykey value's min and max value in this range.
+    * `attime`: min and max at each time.
+    * (default: `all`: min and max thorough all time range)
   * color: line colors in line chart in marker popup (default: [Chart.js color palette](https://www.chartjs.org/docs/latest/general/colors.html#default-color-palette))
   * filter: filter config.
     * `0`: show only features with radiuskey value === 0.
@@ -70,9 +74,11 @@
 ## License
 * html and *.{py,gs} script files are distributed under the terms of the MIT license.
 * Icons (`close_{blue,red}.svg`) are from [Material Symbols](https://fonts.google.com/icons), licensed under Apache License Version 2.0.
-* sampledata/ used in the demo:
+* sampledata/*.{ndjson,geojson,json} used in the demo:
   * These sample data use the following copyrighted material with modifications.
     * DOCOMO BIKESHARE, INC. / Association for Open Data of Public Transportation, [Bikeshare information of DOCOMO BIKESHARE, INC.](https://ckan.odpt.org/dataset/c_bikeshare_gbfs-d-nationwide-bikeshare), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.en).
     * OpenStreet Corp. / Association for Open Data of Public Transportation, [Bikeshare information of OpenStreet](https://ckan.odpt.org/dataset/c_bikeshare_gbfs-openstreet), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.en), [ODC BY 1.0](https://opendatacommons.org/licenses/by/1-0/), [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/).
+  * 15-PT30M-capacity-icon0-population.geojson file also uses the following copyrighted material with modifications.
+    * MLIT Japan. [全国の人流オープンデータ](https://www.geospatial.jp/ckan/dataset/mlit-1km-fromto). [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode)
 * sampledata2/ : Bay Wheels
 * sampledata3/ : Vélib' Metropole
