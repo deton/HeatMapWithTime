@@ -8,8 +8,13 @@
 </head>
 <body>
 <h1>Make TimestampedGeoJson data</h1>
-<div id="toolbar">
-    Load input data: <input type="file" id="fileElem" accept=".ndjson" multiple />
+<div>
+    <ul>
+        <li><input type="checkbox" id="iconstyle0" name="iconstyle0" />
+            Use 'marker' icon for radius === 0
+        </li>
+        <li>Load input data: <input type="file" id="fileElem" accept=".ndjson" multiple /></li>
+    </ul>
 </div>
 
 <h2>Input data format</h2>
@@ -81,6 +86,7 @@ fileElem.addEventListener("change", () => {
 });
 
 function loadData(text) {
+    const iconstyle0 = document.getElementById("iconstyle0").checked;
     const stations = {};
     const features = {}; // output
     text.split('\n').filter(x => x).forEach((line, lnum) => {
@@ -141,6 +147,13 @@ function loadData(text) {
             }
             if (capacity !== undefined) {
                 features[featureId].properties.capacity.push(capacity);
+            }
+            if (iconstyle0) { // use 'marker' icon for radius === 0
+                features[featureId].properties.iconstyle0 = {
+                    iconUrl: systemId === 'hellocycling' ? 'https://deton.github.io/HeatMapWithTime/close_blue.svg' : 'https://deton.github.io/HeatMapWithTime/close_red.svg',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12],
+                }
             }
         });
     });

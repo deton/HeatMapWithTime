@@ -157,19 +157,21 @@ function pointToLayer(feature, latLng, radiuskey) {
         return new L.Marker(latLng);
     }
     if (feature.properties.icon == 'circle') {
+        let iconstyle0 = feature.properties.iconstyle0;
+        if (iconstyle0 && radiuskey) {
+            const idx = getIdx();
+            const radius = feature.properties[radiuskey].at(idx);
+            if (radius === 0) {
+                return new L.Marker(latLng, {
+                    icon: L.icon(iconstyle0),
+                });
+            }
+        }
         if (iconstyle) {
             if (!radiuskey) {
                 return new L.circleMarker(latLng, iconstyle);
             }
-            const cur = map.timeDimension.getCurrentTime();
-            let idx = -1;
-            if (feature.properties.times) { // [Number]
-                //idx = feature.properties.times.indexOf(cur);
-                idx = feature.properties.times.findIndex((t, i) => {
-                    const tnext = feature.properties.times.at(i + 1);
-                    return (cur >= t && (tnext === undefined || cur < tnext));
-                });
-            }
+            const idx = getIdx();
             const defradius = iconstyle.radius || 2;
             return new L.circleMarker(latLng, {
                 ...iconstyle,
@@ -180,6 +182,19 @@ function pointToLayer(feature, latLng, radiuskey) {
         return new L.circleMarker(latLng);
     }
     return new L.Marker(latLng);
+
+    function getIdx() {
+        const cur = map.timeDimension.getCurrentTime();
+        let idx = -1;
+        if (feature.properties.times) { // [Number]
+            //idx = feature.properties.times.indexOf(cur);
+            idx = feature.properties.times.findIndex((t, i) => {
+                const tnext = feature.properties.times.at(i + 1);
+                return (cur >= t && (tnext === undefined || cur < tnext));
+            });
+        }
+        return idx;
+    }
 }
 
 function bindPopupTooltip(feature, layer, valuekeys) {
