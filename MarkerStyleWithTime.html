@@ -45,7 +45,7 @@ L.Control.TimeDimensionCustom = L.Control.TimeDimension.extend({
 </div>
 </body>
 <script>
-var map = L.map('map');
+var map = L.map('map', {preferCanvas: true});
 L.tileLayer('https://tile.openstreetmap.jp/styles/osm-bright/{z}/{x}/{y}.png', {
     attribution: '<a href="https://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'
 }).addTo(map);
