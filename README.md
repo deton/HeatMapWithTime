@@ -20,6 +20,8 @@
 
 * Demo1 (Kawasaki GBFS): https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=35.5490,139.6806&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M.geojson&color=red&color=blue
 * Demo1 (with capacity line): https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=35.5490,139.6806&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M-capacity.geojson&color=red&color=blue&color=green
+* Demo1 (with population): https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=35.5490,139.6806&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M-capacity-icon0-population.geojson&opacitykey=v&opacityRange=all
+* Demo1 (with railstation): https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=35.5854,139.5767&zoom=12&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M-capacity-icon0-railstation.geojson
 * Demo2 (San Francisco GBFS): https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=37.7662,-122.3854&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata2/fgb-0821-PT30M.geojson&color=red&color=blue
 * Demo3 (Paris GBFS): https://deton.github.io/HeatMapWithTime/MarkerStyleWithTime.html?latlon=48.8557,2.3334&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata3/Paris-0822-PT30M.geojson&color=red&color=blue
 * URL parameters
@@ -80,5 +82,7 @@
     * OpenStreet Corp. / Association for Open Data of Public Transportation, [Bikeshare information of OpenStreet](https://ckan.odpt.org/dataset/c_bikeshare_gbfs-openstreet), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.en), [ODC BY 1.0](https://opendatacommons.org/licenses/by/1-0/), [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/).
   * 15-PT30M-capacity-icon0-population.geojson file also uses the following copyrighted material with modifications.
     * MLIT Japan. [全国の人流オープンデータ](https://www.geospatial.jp/ckan/dataset/mlit-1km-fromto). [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode)
+  * 15-PT30M-capacity-icon0-railstation.geojson file also uses the following copyrighted material with modifications.
+    * MLIT Japan. [国土数値情報 鉄道データ](https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2023.html). [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode)
 * sampledata2/ : Bay Wheels
 * sampledata3/ : Vélib' Metropole
