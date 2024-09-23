@@ -100,7 +100,9 @@ let iconDLayer;
 function loadData(data) {
     // keep original times not to be overridden by millis array by L.TimeDimension.
     data.features.forEach(feature => {
-        feature.properties.origTimes = [...feature.properties.times];
+        if (feature.properties.times) {
+            feature.properties.origTimes = [...feature.properties.times];
+        }
     });
     const valuekeys = data.valuekeys || [];
     let radiuskey = radiuskeyParam;
