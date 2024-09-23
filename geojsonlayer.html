@@ -146,20 +146,27 @@ function timeinterval(features) {
 }
 
 function renderLayer(json) {
+    const layercfg = {
+        id: 'GeoJsonLayer',
+        data: json,
+        pointType: 'circle',
+        getPointRadius: f => getPointRadiusAtTime(f, time),
+        getFillColor: f => getColor(f, true),
+        getLineColor: f => getColor(f, false),
+        pointRadiusScale: 10,
+        pointRadiusMinPixels: 1,
+        updateTriggers: {
+            getPointRadius: time,
+        },
+    };
+    if (json.features[0].properties.iconstyle0) {
+        layercfg.pointType = 'circle+icon';
+        layercfg.getIcon = f => getIcon(f);
+        layercfg.getIconColor = f => getIconColor(f, time);
+        layercfg.iconSizeMinPixels = 10;
+    }
     deckgl.setProps({
-        layers: new deck.GeoJsonLayer({
-            id: 'GeoJsonLayer',
-            data: json,
-            pointType: 'circle',
-            getPointRadius: f => getPointRadiusAtTime(f, time),
-            getFillColor: f => getColor(f, true),
-            getLineColor: f => getColor(f, false),
-            pointRadiusScale: 10,
-            pointRadiusMinPixesl: 10,
-            updateTriggers: {
-                getPointRadius: time,
-            },
-        }),
+        layers: new deck.GeoJsonLayer(layercfg),
     });
 }
 
@@ -172,9 +179,37 @@ function getColor(feature, isfill) {
     return [...rgb, isfill ? 153 : 255];
 }
 
+function getIcon(feature, time) {
+    const iconstyle0 = feature.properties.iconstyle0;
+    if (!iconstyle0) {
+        return {};
+    }
+    return {
+        url: iconstyle0.iconUrl,
+        width: iconstyle0.iconSize[0],
+        height: iconstyle0.iconSize[1],
+        //anchorX: iconstyle0.iconAnchor[0],
+        //anchorY: iconstyle0.iconAnchor[1],
+        mask: true, // XXX: ignore color of icon image
+    };
+}
+
+function getIconColor(feature, time) {
+    const color = getColor(feature, true);
+    if (radiuskey) {
+        const radius = getPointRadiusAtTime(feature, time);
+        if (radius === 0) {
+            color[3] = 255;
+            return color;
+        }
+    }
+    color[3] = 0;
+    return color;
+}
+
 function getPointRadiusAtTime(feature, time) {
     const idx = getTimeIdx(feature, time);
-    const radius = feature.properties[radiuskey].at(idx) + 2;
+    const radius = feature.properties[radiuskey].at(idx);
     return radius;
 }
 
