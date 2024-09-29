@@ -45,10 +45,25 @@ L.Control.TimeDimensionCustom = L.Control.TimeDimension.extend({
 </div>
 </body>
 <script>
-var map = L.map('map', {preferCanvas: true});
-L.tileLayer('https://tile.openstreetmap.jp/styles/osm-bright/{z}/{x}/{y}.png', {
-    attribution: '<a href="https://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'
-}).addTo(map);
+const baseLayers = {
+    'maptiler-basic-ja': L.tileLayer(
+        'https://tile.openstreetmap.jp/styles/maptiler-basic-ja/{z}/{x}/{y}.png', {
+            attribution: '<a href="https://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'
+        }),
+    'maptiler-toner-ja': L.tileLayer(
+        'https://tile.openstreetmap.jp/styles/maptiler-toner-ja/{z}/{x}/{y}.png', {
+            attribution: '<a href="https://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'
+        }),
+    '色別標高図': L.tileLayer(
+        'https://cyberjapandata.gsi.go.jp/xyz/relief/{z}/{x}/{y}.png', {
+            attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">地理院タイル</a> 海域部は海上保安庁海洋情報部の資料を使用して作成'
+        }),
+};
+var map = L.map('map', {
+    preferCanvas: true,
+    layers: [baseLayers['maptiler-basic-ja']],
+});
+const layerControl = L.control.layers(baseLayers, null).addTo(map);
 
 const urlParams = new URLSearchParams(document.location.search);
 let latlon = urlParams.get('latlon');
