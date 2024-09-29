@@ -84,6 +84,7 @@ function loadData(json) {
             delete f.properties.bikes;
             delete f.properties.docks;
             delete f.properties.capacity;
+            f.properties.icon = 'circle';
             f.properties.iconstyle = {
                 ...f.properties.iconstyle,
                 stroke: false,
