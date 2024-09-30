@@ -163,7 +163,7 @@ function loadData(data) {
             return pointToLayer(feature, latLng, radiuskey);
         },
         onEachFeature: (feature, layer) => {
-            bindPopupTooltip(feature, layer, valuekeys);
+            bindPopupTooltip(feature, layer, valuekeys, opacityCfg);
         },
         style: (feature) => {
             return styleFunc(feature, opacityCfg);
@@ -240,9 +240,19 @@ function getTimeIdx(featureTimes) {
     return idx;
 }
 
-function bindPopupTooltip(feature, layer, valuekeys) {
+function bindPopupTooltip(feature, layer, valuekeys, opacityCfg) {
     if (feature.properties.tooltip) {
         layer.bindTooltip(feature.properties.tooltip);
+    }
+    if (feature.geometry.type === 'Polygon') {
+        if (opacityCfg.key && feature.properties.times && feature.properties[opacityCfg.key]) {
+            const idx = getTimeIdx(feature.properties.times);
+            const v = feature.properties[opacityCfg.key].at(idx);
+            layer.bindPopup(`${feature.properties.popup || ''} ${v}`);
+        } else if (feature.properties.popup) {
+            layer.bindPopup(feature.properties.popup);
+        }
+        return;
     }
     if (!(feature.properties.origTimes && valuekeys.length > 0 && feature.properties[valuekeys[0]])) {
         if (feature.properties.popup) {
@@ -290,6 +300,11 @@ function styleFunc(feature, opacityCfg) {
     }
     const idx = getTimeIdx(feature.properties.times);
     const v = feature.properties[opacityCfg.key].at(idx);
+    if (v === 0 && feature.properties.style0) {
+        return feature.properties.style0;
+    } else if (v === 1 && feature.properties.style1) {
+        return feature.properties.style1; // XXX: custom v range for style1
+    }
     let min = opacityCfg.min;
     let max = opacityCfg.max;
     if (opacityCfg.range === 'attime') {

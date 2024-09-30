@@ -17,6 +17,8 @@
             <li>value startsWith: <input type="text" id="filtervalue" name="filtervalue" value="docomo"/></li>
         </ul>
         <li><input type="checkbox" id="addpoints" name="addpoints" checked /><label for="addpoints">Add points</label></li>
+        <li><input type="checkbox" id="style0" name="style0" checked /><label for="style0">Set style for value == 0</label></li>
+        <li><input type="checkbox" id="style1" name="style1" checked /><label for="style1">Set style for value == 1</label></li>
         <li>bbox: <input type="text" id="bbox" name="bbox" value="139.2146,35.3045,140.2391,36.0091"/></li>
         <li>Load input data: <input type="file" id="fileElem" accept=".geojson"/></li>
     </ul>
@@ -68,15 +70,36 @@ function loadData(json) {
 
     polygons.features = polygons.features.filter(f => f); // filter out null
     // style for polygon
+    const addStyle0 = document.getElementById("style0").checked;
+    const addStyle1 = document.getElementById("style1").checked;
     polygons.features.forEach(f => {
         delete f.properties.icon;
-        const color = f.properties.iconstyle?.color;
         delete f.properties.iconstyle;
         f.properties.style = {
-            fillColor: color,
+            //fillColor: color,
             weight: 1,
             ...f.properties.style,
         };
+        if (addStyle0 && f.properties.bikes && 0 in f.properties.bikes
+            || f.properties.docks && 0 in f.properties.docks
+            || f.properties.capacity && 0 in f.properties.capacity) {
+            f.properties.style0 = {
+                ...f.properties.style0,
+                fillColor: 'red',
+                fillOpacity: 0.3,
+                weight: 1,
+            };
+        }
+        if (addStyle1 && f.properties.bikes && 1 in f.properties.bikes
+            || f.properties.docks && 1 in f.properties.docks
+            || f.properties.capacity && 1 in f.properties.capacity) {
+            f.properties.style1 = {
+                ...f.properties.style1,
+                fillColor: 'yellow',
+                fillOpacity: 0.3,
+                weight: 1,
+            };
+        }
     });
     if (points) {
         points.forEach(f => {
@@ -88,7 +111,7 @@ function loadData(json) {
             f.properties.iconstyle = {
                 ...f.properties.iconstyle,
                 stroke: false,
-                fillColor: f.properties.iconstyle?.color,
+                //fillColor: f.properties.iconstyle?.color,
                 fillOpacity: 1.0,
                 radius: 1,
             };
