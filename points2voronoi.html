@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width,
+    initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Make GeoJSON from Points GeoJSON</title>
+</head>
+<body>
+<h1>Make GeoJSON from Points GeoJSON</h1>
+<div>
+<form>
+    <ul>
+        <li><input type="checkbox" id="filter" name="filter" checked /><label for="filter">Filter by properties:</label></li>
+        <ul>
+            <li>key: <input type="text" id="filterkey" name="filterkey" value="popup"/></li>
+            <li>value startsWith: <input type="text" id="filtervalue" name="filtervalue" value="docomo"/></li>
+        </ul>
+        <li><input type="checkbox" id="addpoints" name="addpoints" checked /><label for="addpoints">Add points</label></li>
+        <li><input type="checkbox" id="style0" name="style0" checked /><label for="style0">Set style for value == 0</label></li>
+        <li><input type="checkbox" id="style1" name="style1" checked /><label for="style1">Set style for value == 1</label></li>
+        <li>bbox: <input type="text" id="bbox" name="bbox" value="139.2146,35.3045,140.2391,36.0091"/></li>
+        <li>Load input data: <input type="file" id="fileElem" accept=".geojson"/></li>
+    </ul>
+</form>
+</div>
+
+Using <a href="https://turfjs.org/docs/api/voronoi">voronoi()</a> of Turf.js.
+</body>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+<script>
+const fileInput = document.getElementById("fileElem");
+fileElem.addEventListener("change", () => {
+    Array.from(fileElem.files).forEach(file => {
+        file.text().then(text => {
+            const result = loadData(JSON.parse(text));
+            const outfname = file.name.replace(/\.geojson$/, '.voronoi.geojson');
+            const outfile = new File([JSON.stringify(result)], outfname, {
+              type: 'application/geo+json'
+            });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(outfile);
+            a.download = outfile.name;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }).catch(console.error);
+    });
+    //fileElem.value = '';
+});
+
+function loadData(json) {
+    if (document.getElementById("filter").checked) {
+        const filterKey = document.getElementById("filterkey").value;
+        const filterValue = document.getElementById("filtervalue").value;
+        json.features = json.features.filter(f => f.properties[filterKey].startsWith(filterValue));
+    }
+    // TODO: select bbox using map
+    const bbox = document.getElementById("bbox").value.split(",").map(Number);
+    //const bbox = turf.bbox(json);
+    //const bboxKawasaki = [139.5487, 35.4931, 139.8124, 35.6048];
+    //const bboxHonsyu = [128.8916, 31.0153, 145.6787, 45.6755];
+    //const bboxKanto = [138.8480, 34.9580, 140.7156, 36.5185];
+    //const bboxKanto = [139.2146, 35.1839, 140.2391, 36.0091];
+    // 小豆島を外す。hellocyclingのbikeが多くopacity max大になり他の区別が難
+    //const bboxKanto = [139.2146, 35.3045, 140.2391, 36.0091];
+    const polygons = turf.voronoi(json, {bbox: bbox});
+
+    const addPoints = document.getElementById("addpoints").checked;
+    const points = addPoints ? json.features.filter((f, idx) => polygons.features[idx]) : null;
+
+    polygons.features = polygons.features.filter(f => f); // filter out null
+    // style for polygon
+    const addStyle0 = document.getElementById("style0").checked;
+    const addStyle1 = document.getElementById("style1").checked;
+    polygons.features.forEach(f => {
+        delete f.properties.icon;
+        delete f.properties.iconstyle;
+        f.properties.style = {
+            //fillColor: color,
+            weight: 1,
+            ...f.properties.style,
+        };
+        if (addStyle0 && f.properties.bikes && 0 in f.properties.bikes
+            || f.properties.docks && 0 in f.properties.docks
+            || f.properties.capacity && 0 in f.properties.capacity) {
+            f.properties.style0 = {
+                ...f.properties.style0,
+                fillColor: 'red',
+                fillOpacity: 0.3,
+                weight: 1,
+            };
+        }
+        if (addStyle1 && f.properties.bikes && 1 in f.properties.bikes
+            || f.properties.docks && 1 in f.properties.docks
+            || f.properties.capacity && 1 in f.properties.capacity) {
+            f.properties.style1 = {
+                ...f.properties.style1,
+                fillColor: 'yellow',
+                fillOpacity: 0.3,
+                weight: 1,
+            };
+        }
+    });
+    if (points) {
+        points.forEach(f => {
+            delete f.properties.times;
+            delete f.properties.bikes;
+            delete f.properties.docks;
+            delete f.properties.capacity;
+            f.properties.icon = 'circle';
+            f.properties.iconstyle = {
+                ...f.properties.iconstyle,
+                stroke: false,
+                //fillColor: f.properties.iconstyle?.color,
+                fillOpacity: 1.0,
+                radius: 1,
+            };
+        });
+        polygons.features = points.concat(polygons.features);
+    }
+    return polygons;
+}
+</script>
+</html>
