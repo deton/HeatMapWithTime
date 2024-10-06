@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width,
+    initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Make diff data for TimestampedGeoJson</title>
+</head>
+<body>
+<h1>Make diff data for TimestampedGeoJson</h1>
+<div id="toolbar">
+    Load two TimestampedGeoJson files: <input type="file" id="fileElem" accept=".geojson" multiple />
+</div>
+</body>
+<script>
+const fileInput = document.getElementById("fileElem");
+fileElem.addEventListener("change", () => {
+    const files = Array.from(fileElem.files);
+    Promise.all(files.map(file => {
+        return file.text().then(text => JSON.parse(text));
+    })).then(geojsons => {
+        const result = makeDiff(geojsons);
+        const outfname = files[1].name.replace(/\.geojson$/, '_diff.geojson');
+        const outfile = new File([JSON.stringify(result)], outfname, {
+          type: 'application/geo+json'
+        });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(outfile);
+        a.download = outfile.name;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }).catch(console.error);
+    //fileElem.value = '';
+});
+
+function makeDiff(geojsons) {
+    const oldStations = {};
+    geojsons[0].features.forEach(f => {
+        oldStations[f.properties.popup] = f;
+    });
+    const len = Math.min(
+        geojsons[0].features[0].properties.times.length,
+        geojsons[1].features[0].properties.times.length);
+    const stations = [];
+    geojsons[1].features.forEach(f => {
+        if (!(f.properties.popup in oldStations)) { // new station
+            // TODO: use special color or icon for new station
+            const fnew = {
+                ...f,
+                properties: {
+                    ...f.properties,
+                    bikes: trimprop(f.properties.bikes, len),
+                    docks: trimprop(f.properties.docks, len),
+                    capacity: trimprop(f.properties.capacity, len),
+                },
+            };
+            updateStyle(fnew);
+            stations.push(fnew);
+            return;
+        }
+        const old = oldStations[f.properties.popup];
+        const fnew = {
+            ...f,
+            properties: {
+                ...f.properties,
+                bikes: diffprop(f.properties.bikes, old.properties.bikes, len),
+                docks: diffprop(f.properties.docks, old.properties.docks, len),
+                capacity: diffprop(f.properties.capacity, old.properties.capacity, len),
+            },
+        };
+        updateStyle(fnew);
+        stations.push(fnew);
+        delete oldStations[f.properties.popup];
+    });
+
+    // removed stations
+    Object.values(oldStations).forEach(f => {
+        const fnew = {
+            ...f,
+            properties: {
+                ...f.properties,
+                times: stations[0].properties.times, // use new times
+                bikes: negprop(f.properties.bikes, len),
+                docks: negprop(f.properties.docks, len),
+                capacity: negprop(f.properties.capacity, len),
+            },
+        };
+        updateStyle(fnew);
+        stations.push(fnew);
+    });
+
+    const geojson = {
+        type: 'FeatureCollection',
+        valuekeys: ['bikes'],
+        features: stations,
+    };
+    if (geojson.features[0].properties.docks !== undefined) {
+        geojson.valuekeys.push('docks');
+    }
+    if (geojson.features[0].properties.capacity !== undefined) {
+        geojson.valuekeys.push('capacity');
+    }
+    return geojson;
+}
+
+function updateStyle(f) {
+    delete f.properties.iconstyle0;
+    if (f.properties.bikes && f.properties.bikes.some(x => x < 0)
+        || f.properties.docks && f.properties.docks.some(x => x < 0)
+        || f.properties.capacity && f.properties.capacity.some(x => x < 0)) {
+        f.properties.iconstyle.colorneg = f.properties.popup.startsWith('hellocycling') ? '#00b7fa' : '#00cc33';
+    }
+}
+
+function diffprop(newlist, oldlist, len) {
+    if (!(newlist && oldlist)) {
+        return undefined;
+    }
+    return newlist.slice(0, len).map((x, idx) => x - oldlist[idx]);
+}
+
+function negprop(oldlist, len) {
+    if (!oldlist) {
+        return undefined;
+    }
+    return oldlist.slice(0, len).map(x => -x);
+}
+
+function trimprop(newlist, len) {
+    if (!newlist) {
+        return undefined;
+    }
+    return newlist.slice(0, len);
+}
+</script>
+</html>
