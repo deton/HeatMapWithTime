@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Compare TimestampedGeoJson</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <script src="https://unpkg.com/@mapbox/mapbox-gl-sync-move@0.3.1"></script>
+    <script src="https://unpkg.com/deck.gl@8.9.33/dist.min.js"></script>
+    <style>
+      body { margin: 0; padding: 0; }
+      html, body { height: 100%; }
+      .map { height: 100%; width: 100%; }
+      .maps {
+          display: flex;
+          width: 100%;
+          height: 100%;
+      }
+      .map-overlay {
+          position: absolute;
+          width: 170px;
+          top: 0;
+          left: 0;
+          padding: 0px;
+          background-color: #fff;
+      }
+      .map-overlay-right {
+          position: absolute;
+          width: 170px;
+          top: 0;
+          right: 0;
+          padding: 0px;
+          background-color: #fff;
+      }
+      /* Deck.gl layer is added as an overlay, popup needs to be displayed over it */
+      .maplibregl-popup {
+          z-index: 2;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="maps">
+        <div id="map0" class="map"></div>
+        <div id="map1" class="map"></div>
+    </div>
+    <div class="map-overlay top">
+        <div class="map-overlay-inner">
+            <input id="slider0" type="range" min="0" value="0" />
+        </div>
+        <div class="map-overlay-inner">
+            <button id="pauseButton0">&#x23f8;</button>
+            <button id="playButton0">&#x25b6;</button>
+        </div>
+        <div id="label0"></div>
+    </div>
+    <div class="map-overlay-right top">
+        <div class="map-overlay-inner">
+            <input id="slider1" type="range" min="0" value="0" />
+        </div>
+        <div class="map-overlay-inner">
+            <button id="pauseButton1">&#x23f8;</button>
+            <button id="playButton1">&#x25b6;</button>
+        </div>
+        <div id="label1"></div>
+    </div>
+    <script>
+const urlParams = new URLSearchParams(document.location.search);
+let latlon = [35.7574, 139.7293];
+let latlonParam = urlParams.get('latlon');
+if (latlonParam) {
+    latlon = latlonParam.split(',').map(Number);
+}
+let zoom = +urlParams.get('zoom') || 11;
+let pitch = urlParams.has('pitch') ? +urlParams.get('pitch') : 0; // allow 0
+const radiuskeyParam = urlParams.get('radiuskey');
+let mapStyle = urlParams.get('mapStyle') || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+
+const intervals = urlParams.getAll('intervalMs').map(Number);
+if (intervals.length === 0) {
+    intervals.push(1000);
+    intervals.push(1000);
+}
+const jsonurls = urlParams.getAll('jsonurl');
+if (jsonurls.length === 0) {
+    jsonurls.push('https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M-capacity.geojson');
+}
+const offsets = urlParams.getAll('offset');
+
+const sliders = [];
+const pauseButtons = [];
+const playButtons = [];
+
+const timerIds = [null, null];
+function stopTimer(idx) {
+    if (idx === undefined) {
+        stopTimer(0);
+        stopTimer(1);
+    } else {
+        clearInterval(timerIds[idx]);
+    }
+}
+
+const maps = [];
+const overlays = [];
+for (let i = 0; i < 2; i++) {
+    sliders[i] = document.getElementById(`slider${i}`);
+    pauseButtons[i] = document.getElementById(`pauseButton${i}`);
+    playButtons[i] = document.getElementById(`playButton${i}`);
+    pauseButtons[i].onclick = () => { stopTimer(i) };
+
+    maps.push(new maplibregl.Map({
+        container: `map${i}`,
+        style: mapStyle,
+        center: [latlon[1], latlon[0]],
+        zoom: zoom,
+        pitch: pitch,
+        maxPitch: 85,
+    }));
+    overlays.push(new deck.MapboxOverlay({layers: []}));
+    maps[i].addControl(overlays[i]);
+
+}
+syncMaps(maps[0], maps[1]);
+
+if (jsonurls.length >= 2) {
+    fetch(jsonurls[1]).then(res => res.json()).then(json => loadData(json, 1)).catch(console.error);
+} else {
+    fetch(jsonurls[0]).then(res => res.json())
+        .then(json => {
+            loadData(json, 0);
+            if (jsonurls.length < 2) {
+                loadData(json, 1);
+            }
+        }).catch(console.error);
+}
+
+let radiuskey = radiuskeyParam;
+const curTimes = [0, 0];
+function loadData(json, idx) {
+    stopTimer(idx);
+
+    if (!latlonParam && idx === 0) {
+        const lonlat = json.features[0].geometry.coordinates; // TODO: calc bounds
+        maps[idx].flyTo({
+            center: lonlat,
+            zoom: zoom,
+            pitch: pitch,
+        });
+    }
+    const valuekeys = json.valuekeys || [];
+    if (radiuskey === null && valuekeys.length > 0) {
+        radiuskey = valuekeys[0];
+    }
+
+    const [timeMin, timeMax, tick] = timeinterval(json.features);
+    curTimes[idx] = timeMin;
+
+    sliders[idx].min = String(timeMin);
+    sliders[idx].max = String(timeMax);
+    sliders[idx].oninput = onSliderValueChange;
+    function onSliderValueChange(ev) {
+        curTimes[idx] = Number(ev.target.value);
+        updateSliderLabel(curTimes[idx], json);
+        renderLayer(json, curTimes[idx], idx);
+    }
+    function updateSliderLabel(time, json) {
+        const timeIdx = getTimeIdx(json.features[0], time);
+        const label = json.features[0].properties.times.at(timeIdx);
+        document.getElementById(`label${idx}`).textContent = label;
+    }
+
+    playButtons[idx].onclick = startTimer;
+    function startTimer() {
+        stopTimer(idx);
+        timerIds[idx] = setInterval(() => {
+            curTimes[idx] += tick;
+            sliders[idx].value = String(curTimes[idx]);
+            updateSliderLabel(curTimes[idx], json);
+            if (curTimes[idx] >= timeMax) {
+                stopTimer(idx);
+            } else {
+                renderLayer(json, curTimes[idx], idx);
+            }
+        }, intervals[idx]);
+    }
+    startTimer(idx);
+}
+
+function timeinterval(features) {
+    let min = +Infinity;
+    let max = 0;
+    let mindiff = +Infinity;
+    features.forEach(feature => {
+        const times = feature.properties.times;
+        if (!times) {
+            return;
+        }
+        const millis = times.map(Date.parse);
+        feature._featureTimes = millis; // XXX: like Leaflet.TimeDimension
+        min = Math.min(min, ...millis);
+        max = Math.max(max, ...millis);
+        // TODO: diff on all times in all features
+        mindiff = millis.reduce((accum, cur, idx) => {
+            return Math.min(accum, cur - millis[idx - 1]);
+        });
+    });
+    return [min, max, mindiff];
+}
+
+function renderLayer(json, time, idx) {
+    const layercfg = {
+        id: 'GeoJsonLayer',
+        data: json,
+        pointType: 'circle',
+        getPointRadius: f => getPointRadiusAtTime(f, time),
+        getFillColor: f => getColor(f, true),
+        getLineColor: f => getColor(f, false),
+        pointRadiusScale: 10,
+        pointRadiusMinPixels: 1,
+        updateTriggers: {
+            getPointRadius: time,
+        },
+    };
+    if (json.features[0].properties.iconstyle0) {
+        layercfg.pointType = 'circle+icon';
+        layercfg.getIcon = f => getIcon(f);
+        layercfg.getIconColor = f => getIconColor(f, time);
+        layercfg.iconSizeMinPixels = 10;
+    }
+    overlays[idx].setProps({
+        layers: new deck.GeoJsonLayer(layercfg),
+    });
+}
+
+function getColor(feature, isfill) {
+    const color = feature.properties.iconstyle && feature.properties.iconstyle.color;
+    if (!color) {
+        return [255, 0, 0, isfill ? 153 : 255];
+    }
+    const rgb = color.slice(1).match(/.{2}/g).map(hex => parseInt(hex, 16));
+    return [...rgb, isfill ? 153 : 255];
+}
+
+function getIcon(feature, time) {
+    const iconstyle0 = feature.properties.iconstyle0;
+    if (!iconstyle0) {
+        return {};
+    }
+    return {
+        url: iconstyle0.iconUrl,
+        width: iconstyle0.iconSize[0],
+        height: iconstyle0.iconSize[1],
+        //anchorX: iconstyle0.iconAnchor[0],
+        //anchorY: iconstyle0.iconAnchor[1],
+        mask: true, // XXX: ignore color of icon image
+    };
+}
+
+function getIconColor(feature, time) {
+    const color = getColor(feature, true);
+    if (radiuskey) {
+        const radius = getPointRadiusAtTime(feature, time);
+        if (radius === 0) {
+            color[3] = 255;
+            return color;
+        }
+    }
+    color[3] = 0;
+    return color;
+}
+
+function getPointRadiusAtTime(feature, time) {
+    const idx = getTimeIdx(feature, time);
+    const radius = feature.properties[radiuskey].at(idx);
+    return radius;
+}
+
+function getTimeIdx(feature, time) {
+    const featureTimes = feature._featureTimes;
+    if (!featureTimes) {
+        return -1;
+    }
+    const idx = featureTimes.findIndex((t, i) => {
+        const tnext = featureTimes.at(i + 1);
+        return (time >= t && (tnext === undefined || time < tnext));
+    });
+    return idx;
+}
+    </script>
+  </body>
+</html>
