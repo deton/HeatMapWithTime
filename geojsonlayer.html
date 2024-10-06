@@ -2,6 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
+    <title>TimestampedGeoJson</title>
     <script src="https://unpkg.com/deck.gl@^9.0.0/dist.min.js"></script>
     <script src='https://unpkg.com/maplibre-gl@3.0.0/dist/maplibre-gl.js'></script>
     <link href='https://unpkg.com/maplibre-gl@3.0.0/dist/maplibre-gl.css' rel='stylesheet' />
@@ -64,6 +65,11 @@ const deckgl = new deck.DeckGL({
         latitude: latlon[0],
         zoom: zoom,
         pitch: pitch,
+        maxPitch: 85,
+    },
+    mapOptions: {
+        // https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/MapOptions/#maxpitch
+        maxPitch: 85, // XXX: >60 is experimental. may result in rendering issue
     },
     controller: true,
     getTooltip: ({object}) => object && object.properties.tooltip,
@@ -82,6 +88,7 @@ function loadData(json) {
                 latitude: lonlat[1],
                 zoom: zoom,
                 pitch: pitch,
+                maxPitch: 85,
             },
         });
     }

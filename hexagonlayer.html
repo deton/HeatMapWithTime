@@ -77,6 +77,11 @@ const deckgl = new deck.DeckGL({
         latitude: latlon[0],
         zoom: zoom,
         pitch: pitch,
+        maxPitch: 85,
+    },
+    mapOptions: {
+        // https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/MapOptions/#maxpitch
+        maxPitch: 85, // XXX: >60 is experimental. may result in rendering issue
     },
     controller: true,
 });
@@ -94,6 +99,7 @@ function loadData(json) {
                 latitude: latlon[0],
                 zoom: zoom,
                 pitch: pitch,
+                maxPitch: 85,
             },
         });
     }
