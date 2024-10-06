@@ -51,6 +51,7 @@
         <div class="map-overlay-inner">
             <button id="pauseButton0">&#x23f8;</button>
             <button id="playButton0">&#x25b6;</button>
+            <input type="checkbox" id="sync" name="sync"/><label for="sync">Sync</label>
         </div>
         <div id="label0"></div>
     </div>
@@ -81,11 +82,15 @@ if (intervals.length === 0) {
     intervals.push(1000);
     intervals.push(1000);
 }
+const offsets = urlParams.getAll('offsetMinute').map(minute => +minute * 60000);
+if (offsets.length === 0) {
+    offsets.push(0);
+    offsets.push(0);
+}
 const jsonurls = urlParams.getAll('jsonurl');
 if (jsonurls.length === 0) {
     jsonurls.push('https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M-capacity.geojson');
 }
-const offsets = urlParams.getAll('offset');
 
 const sliders = [];
 const pauseButtons = [];
@@ -94,10 +99,13 @@ const playButtons = [];
 const timerIds = [null, null];
 function stopTimer(idx) {
     if (idx === undefined) {
-        stopTimer(0);
-        stopTimer(1);
+        clearInterval(timerIds[0]);
+        timerIds[0] = null;
+        clearInterval(timerIds[1]);
+        timerIds[1] = null;
     } else {
         clearInterval(timerIds[idx]);
+        timerIds[idx] = null;
     }
 }
 
@@ -107,7 +115,13 @@ for (let i = 0; i < 2; i++) {
     sliders[i] = document.getElementById(`slider${i}`);
     pauseButtons[i] = document.getElementById(`pauseButton${i}`);
     playButtons[i] = document.getElementById(`playButton${i}`);
-    pauseButtons[i].onclick = () => { stopTimer(i) };
+    pauseButtons[i].onclick = () => {
+        stopTimer(i);
+        if (syncCheckbox.checked) {
+            const otherIdx = i === 0 ? 1 : 0;
+            stopTimer(otherIdx);
+        }
+    };
 
     maps.push(new maplibregl.Map({
         container: `map${i}`,
@@ -119,26 +133,32 @@ for (let i = 0; i < 2; i++) {
     }));
     overlays.push(new deck.MapboxOverlay({layers: []}));
     maps[i].addControl(overlays[i]);
-
 }
 syncMaps(maps[0], maps[1]);
 
+const syncCheckbox = document.getElementById("sync");
+syncCheckbox.checked = urlParams.get("sync");
+
 if (jsonurls.length >= 2) {
     fetch(jsonurls[1]).then(res => res.json()).then(json => loadData(json, 1)).catch(console.error);
-} else {
-    fetch(jsonurls[0]).then(res => res.json())
-        .then(json => {
-            loadData(json, 0);
-            if (jsonurls.length < 2) {
-                loadData(json, 1);
-            }
-        }).catch(console.error);
 }
+fetch(jsonurls[0]).then(res => res.json())
+    .then(json => {
+        loadData(json, 0);
+        if (jsonurls.length < 2) {
+            loadData(json, 1);
+        }
+    }).catch(console.error);
 
 let radiuskey = radiuskeyParam;
+let commonTick = Infinity;
+//TODO:components[idx].{curTime,slider,...} instead of {curTimes[idx],sliders[idx],...}
+const jsons = [null, null];
 const curTimes = [0, 0];
+const updateTimeFuncs = [null, null];
 function loadData(json, idx) {
     stopTimer(idx);
+    jsons[idx] = json;
 
     if (!latlonParam && idx === 0) {
         const lonlat = json.features[0].geometry.coordinates; // TODO: calc bounds
@@ -154,15 +174,22 @@ function loadData(json, idx) {
     }
 
     const [timeMin, timeMax, tick] = timeinterval(json.features);
-    curTimes[idx] = timeMin;
+    commonTick = Math.min(tick, commonTick);
+    curTimes[idx] = timeMin + offsets[idx];
 
     sliders[idx].min = String(timeMin);
     sliders[idx].max = String(timeMax);
     sliders[idx].oninput = onSliderValueChange;
     function onSliderValueChange(ev) {
-        curTimes[idx] = Number(ev.target.value);
+        const newvalue = Number(ev.target.value);
+        const diff = newvalue - curTimes[idx];
+        curTimes[idx] = newvalue;
         updateSliderLabel(curTimes[idx], json);
         renderLayer(json, curTimes[idx], idx);
+        if (syncCheckbox.checked) {
+            const otherIdx = idx === 0 ? 1 : 0;
+            updateTimeFuncs[otherIdx](diff);
+        }
     }
     function updateSliderLabel(time, json) {
         const timeIdx = getTimeIdx(json.features[0], time);
@@ -170,19 +197,31 @@ function loadData(json, idx) {
         document.getElementById(`label${idx}`).textContent = label;
     }
 
+    updateTimeFuncs[idx] = updateTime;
+    function updateTime(tick) {
+        curTimes[idx] += tick;
+        sliders[idx].value = String(curTimes[idx]);
+        updateSliderLabel(curTimes[idx], json);
+        if (curTimes[idx] >= timeMax) {
+            stopTimer(idx);
+        } else {
+            renderLayer(json, curTimes[idx], idx);
+        }
+    }
+
     playButtons[idx].onclick = startTimer;
     function startTimer() {
         stopTimer(idx);
         timerIds[idx] = setInterval(() => {
-            curTimes[idx] += tick;
-            sliders[idx].value = String(curTimes[idx]);
-            updateSliderLabel(curTimes[idx], json);
-            if (curTimes[idx] >= timeMax) {
-                stopTimer(idx);
-            } else {
-                renderLayer(json, curTimes[idx], idx);
-            }
+            updateTime(commonTick);
         }, intervals[idx]);
+        if (syncCheckbox.checked) {
+            const otherIdx = idx === 0 ? 1 : 0;
+            stopTimer(otherIdx);
+            timerIds[otherIdx] = setInterval(() => {
+                updateTimeFuncs[otherIdx](commonTick);
+            }, intervals[otherIdx]);
+        }
     }
     startTimer(idx);
 }
@@ -280,6 +319,12 @@ function getTimeIdx(feature, time) {
     const featureTimes = feature._featureTimes;
     if (!featureTimes) {
         return -1;
+    }
+    if (time < featureTimes[0]) {
+        return 0;
+    }
+    if (time >= featureTimes.at(-1)) {
+        return featureTimes.length - 1;
     }
     const idx = featureTimes.findIndex((t, i) => {
         const tnext = featureTimes.at(i + 1);
