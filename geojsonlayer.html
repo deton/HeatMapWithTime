@@ -42,6 +42,7 @@ let zoom = +urlParams.get('zoom') || 11;
 let pitch = urlParams.has('pitch') ? +urlParams.get('pitch') : 0; // allow 0
 let interval = +urlParams.get('intervalMs') || 1000;
 const radiuskeyParam = urlParams.get('radiuskey');
+const radiusScale = +urlParams.get('radiusScale') || 10;
 let mapStyle = urlParams.get('mapStyle') || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 
 const jsonurl = urlParams.get('jsonurl') || 'https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M-capacity.geojson';
@@ -118,14 +119,14 @@ function loadData(json) {
     function startTimer() {
         stopTimer();
         timerId = setInterval(() => {
-            time += tick;
             slider.value = String(time);
             updateSliderLabel(time, json);
-            if (time >= timeMax) {
+            if (time > timeMax) {
                 stopTimer();
             } else {
                 renderLayer(json);
             }
+            time += tick;
         }, interval);
     }
     startTimer();
@@ -160,7 +161,7 @@ function renderLayer(json) {
         getPointRadius: f => Math.abs(getPointRadiusAtTime(f, time)),
         getFillColor: f => getColor(f, true, time),
         getLineColor: f => getColor(f, false, time),
-        pointRadiusScale: 10,
+        pointRadiusScale: radiusScale,
         pointRadiusMinPixels: 1,
         updateTriggers: {
             getPointRadius: time,

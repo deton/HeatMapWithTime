@@ -8,9 +8,12 @@
 </head>
 <body>
 <h1>Make diff data for TimestampedGeoJson</h1>
-<div id="toolbar">
-    Load two TimestampedGeoJson files: <input type="file" id="fileElem" accept=".geojson" multiple />
-</div>
+<form>
+    <ul>
+        <li><input type="checkbox" id="sum" name="sum" /><label for="sum">Output sum of diff</label></li>
+        <li>Load two TimestampedGeoJson files: <input type="file" id="fileElem" accept=".geojson" multiple /></li>
+    </ul>
+</form>
 </body>
 <script>
 const fileInput = document.getElementById("fileElem");
@@ -20,7 +23,11 @@ fileElem.addEventListener("change", () => {
         return file.text().then(text => JSON.parse(text));
     })).then(geojsons => {
         const result = makeDiff(geojsons);
-        const outfname = files[1].name.replace(/\.geojson$/, '_diff.geojson');
+        let postfix = '_diff.geojson';
+        if (document.getElementById("sum").checked) {
+            postfix = '_diffsum.geojson';
+        }
+        const outfname = files[1].name.replace(/\.geojson$/, postfix);
         const outfile = new File([JSON.stringify(result)], outfname, {
           type: 'application/geo+json'
         });
@@ -34,6 +41,7 @@ fileElem.addEventListener("change", () => {
 });
 
 function makeDiff(geojsons) {
+    const isSum = document.getElementById("sum").checked;
     const oldStations = {};
     geojsons[0].features.forEach(f => {
         oldStations[f.properties.popup] = f;
@@ -49,11 +57,15 @@ function makeDiff(geojsons) {
                 ...f,
                 properties: {
                     ...f.properties,
+                    times: trimprop(f.properties.times, len),
                     bikes: trimprop(f.properties.bikes, len),
                     docks: trimprop(f.properties.docks, len),
                     capacity: trimprop(f.properties.capacity, len),
                 },
             };
+            if (isSum) {
+                sumProps(fnew);
+            }
             updateStyle(fnew);
             stations.push(fnew);
             return;
@@ -63,11 +75,15 @@ function makeDiff(geojsons) {
             ...f,
             properties: {
                 ...f.properties,
+                times: trimprop(f.properties.times, len),
                 bikes: diffprop(f.properties.bikes, old.properties.bikes, len),
                 docks: diffprop(f.properties.docks, old.properties.docks, len),
                 capacity: diffprop(f.properties.capacity, old.properties.capacity, len),
             },
         };
+        if (isSum) {
+            sumProps(fnew);
+        }
         updateStyle(fnew);
         stations.push(fnew);
         delete oldStations[f.properties.popup];
@@ -79,12 +95,15 @@ function makeDiff(geojsons) {
             ...f,
             properties: {
                 ...f.properties,
-                times: stations[0].properties.times, // use new times
+                times: trimprop(stations[0].properties.times, len), // use new times
                 bikes: negprop(f.properties.bikes, len),
                 docks: negprop(f.properties.docks, len),
                 capacity: negprop(f.properties.capacity, len),
             },
         };
+        if (isSum) {
+            sumProps(fnew);
+        }
         updateStyle(fnew);
         stations.push(fnew);
     });
@@ -110,6 +129,16 @@ function updateStyle(f) {
         || f.properties.capacity && f.properties.capacity.some(x => x < 0)) {
         f.properties.iconstyle.colorneg = f.properties.popup.startsWith('hellocycling') ? '#00b7fa' : '#00cc33';
     }
+}
+
+function sumProps(f) {
+    f.properties.times = [f.properties.times.at(-1)];
+    ['bikes', 'docks', 'capacity'].forEach(prop => {
+        if (f.properties[prop]) {
+            const sum = f.properties[prop].reduce((accum, cur) => accum + cur, 0);
+            f.properties[prop] = [sum];
+        }
+    });
 }
 
 function diffprop(newlist, oldlist, len) {

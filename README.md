@@ -69,6 +69,7 @@ deck.gl version of MarkerStyleWithTime.
     * (default: `https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M-capacity.geojson`)
   * radiuskey: key in feature.properties to change radius of circle marker
     * (default: .valuekeys[0] in geojson)
+  * [radiusScale](https://deck.gl/docs/api-reference/layers/scatterplot-layer#radiusscale) (default: 10)
 
 ## cmp.html
 Dual maps of GeoJsonLayer.
