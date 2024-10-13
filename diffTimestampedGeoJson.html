@@ -11,7 +11,7 @@
 <form>
     <ul>
         <li><input type="checkbox" id="sum" name="sum" /><label for="sum">Output sum of diff</label></li>
-        <li>Load two TimestampedGeoJson files: <input type="file" id="fileElem" accept=".geojson" multiple /></li>
+        <li>Load one or two TimestampedGeoJson files: <input type="file" id="fileElem" accept=".geojson" multiple /></li>
     </ul>
 </form>
 </body>
@@ -22,11 +22,32 @@ fileElem.addEventListener("change", () => {
     Promise.all(files.map(file => {
         return file.text().then(text => JSON.parse(text));
     })).then(geojsons => {
-        const result = makeDiff(geojsons);
-        let postfix = '_diff.geojson';
-        if (document.getElementById("sum").checked) {
-            postfix = '_diffsum.geojson';
+        const isSum = document.getElementById("sum").checked;
+        let postfix = isSum ? '_diffsum.geojson' : '_diff.geojson';
+        let isTimeDiff = false;
+        if (geojsons.length < 2) {
+            isTimeDiff = true;
+            postfix = isSum ? '_difftimesum.geojson' : '_difftime.geojson';
+            files[1] = files[0];
+            geojsons[1] = { // time shifted geojson
+                ...geojsons[0],
+                features: geojsons[0].features.map(f => {
+                    return {
+                        ...f,
+                        properties: {
+                            ...f.properties,
+                            times: f.properties.times.slice(1),
+                            bikes: f.properties.bikes.slice(1),
+                            docks: f.properties.docks.slice(1),
+                            capacity: f.properties.capacity ? f.properties.capacity.slice(1) : undefined,
+                            rent: f.properties.rent ? f.properties.rent.slice(1) : undefined,
+                            return: f.properties.return ? f.properties.return.slice(1) : undefined,
+                        },
+                    };
+                }),
+            };
         }
+        const result = makeDiff(geojsons, isSum, isTimeDiff);
         const outfname = files[1].name.replace(/\.geojson$/, postfix);
         const outfile = new File([JSON.stringify(result)], outfname, {
           type: 'application/geo+json'
@@ -40,8 +61,7 @@ fileElem.addEventListener("change", () => {
     //fileElem.value = '';
 });
 
-function makeDiff(geojsons) {
-    const isSum = document.getElementById("sum").checked;
+function makeDiff(geojsons, isSum, isTimeDiff) {
     const oldStations = {};
     geojsons[0].features.forEach(f => {
         oldStations[f.properties.popup] = f;
@@ -61,10 +81,12 @@ function makeDiff(geojsons) {
                     bikes: trimprop(f.properties.bikes, len),
                     docks: trimprop(f.properties.docks, len),
                     capacity: trimprop(f.properties.capacity, len),
+                    rent: trimprop(f.properties.rent, len),
+                    return: trimprop(f.properties.return, len),
                 },
             };
             if (isSum) {
-                sumProps(fnew);
+                sumProps(fnew, isTimeDiff);
             }
             updateStyle(fnew);
             stations.push(fnew);
@@ -79,10 +101,12 @@ function makeDiff(geojsons) {
                 bikes: diffprop(f.properties.bikes, old.properties.bikes, len),
                 docks: diffprop(f.properties.docks, old.properties.docks, len),
                 capacity: diffprop(f.properties.capacity, old.properties.capacity, len),
+                rent: diffprop(f.properties.rent, old.properties.rent, len),
+                return: diffprop(f.properties.return, old.properties.return, len),
             },
         };
         if (isSum) {
-            sumProps(fnew);
+            sumProps(fnew, isTimeDiff);
         }
         updateStyle(fnew);
         stations.push(fnew);
@@ -99,10 +123,12 @@ function makeDiff(geojsons) {
                 bikes: negprop(f.properties.bikes, len),
                 docks: negprop(f.properties.docks, len),
                 capacity: negprop(f.properties.capacity, len),
+                rent: negprop(f.properties.rent, len),
+                return: negprop(f.properties.return, len),
             },
         };
         if (isSum) {
-            sumProps(fnew);
+            sumProps(fnew, isTimeDiff);
         }
         updateStyle(fnew);
         stations.push(fnew);
@@ -126,13 +152,28 @@ function updateStyle(f) {
     delete f.properties.iconstyle0;
     if (f.properties.bikes && f.properties.bikes.some(x => x < 0)
         || f.properties.docks && f.properties.docks.some(x => x < 0)
-        || f.properties.capacity && f.properties.capacity.some(x => x < 0)) {
+        || f.properties.capacity && f.properties.capacity.some(x => x < 0)
+        || f.properties.rent && f.properties.rent.some(x => x < 0)
+        || f.properties.return && f.properties.return.some(x => x < 0)) {
         f.properties.iconstyle.colorneg = f.properties.popup.startsWith('hellocycling') ? '#00b7fa' : '#00cc33';
     }
 }
 
-function sumProps(f) {
+function sumProps(f, isTimeDiff) {
     f.properties.times = [f.properties.times.at(-1)];
+    if (isTimeDiff && f.properties.bikes) {
+        // count as rent if number of bikes are smaller than previous time
+        const rentsum = f.properties.bikes.reduce((accum, cur) => {
+            return accum + (cur >= 0 ? 0 : cur);
+        }, 0);
+        f.properties.rent = [-rentsum];
+
+        // count as return if number of bikes are bigger than previous time
+        const returnsum = f.properties.bikes.reduce((accum, cur) => {
+            return accum + (cur <= 0 ? 0 : cur);
+        }, 0);
+        f.properties.return = [returnsum];
+    }
     ['bikes', 'docks', 'capacity'].forEach(prop => {
         if (f.properties[prop]) {
             const sum = f.properties[prop].reduce((accum, cur) => accum + cur, 0);

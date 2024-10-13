@@ -44,6 +44,7 @@ let interval = +urlParams.get('intervalMs') || 1000;
 const radiuskeyParam = urlParams.get('radiuskey');
 const radiusScale = +urlParams.get('radiusScale') || 10;
 let mapStyle = urlParams.get('mapStyle') || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const filterParam = urlParams.get('filter');
 
 const jsonurl = urlParams.get('jsonurl') || 'https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M-capacity.geojson';
 fetch(jsonurl).then(res => res.json()).then(json => loadData(json)).catch(console.error);
@@ -162,7 +163,7 @@ function renderLayer(json) {
         getFillColor: f => getColor(f, true, time),
         getLineColor: f => getColor(f, false, time),
         pointRadiusScale: radiusScale,
-        pointRadiusMinPixels: 1,
+        //pointRadiusMinPixels: 0,
         updateTriggers: {
             getPointRadius: time,
             getFillColor: time,
@@ -227,6 +228,12 @@ function getIconColor(feature, time) {
 function getPointRadiusAtTime(feature, time) {
     const idx = getTimeIdx(feature, time);
     const radius = feature.properties[radiuskey].at(idx);
+    if (filterParam === '>0') {
+        return radius > 0 ? radius : 0;
+    }
+    if (filterParam === '<0') {
+        return radius < 0 ? radius : 0;
+    }
     return radius;
 }
 

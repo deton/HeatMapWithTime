@@ -70,6 +70,9 @@ deck.gl version of MarkerStyleWithTime.
   * radiuskey: key in feature.properties to change radius of circle marker
     * (default: .valuekeys[0] in geojson)
   * [radiusScale](https://deck.gl/docs/api-reference/layers/scatterplot-layer#radiusscale) (default: 10)
+  * filter: filter config.
+    * `>0`: show only features with radiuskey value > 0.
+    * `<0`: show only features with radiuskey value < 0.
 
 ## cmp.html
 Dual maps of GeoJsonLayer.
