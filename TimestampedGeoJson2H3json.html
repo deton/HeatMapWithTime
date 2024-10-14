@@ -47,7 +47,7 @@ function makeH3Sum(data) {
                 hex_id: h3id, // kepler.gl uses 'hex_id'
                 systemId: systemId,
             };
-            ['iconstyle', 'times', 'bikes', 'docks', 'capacity', 'rent', 'return'].forEach(prop => {
+            ['times', 'bikes', 'docks', 'capacity', 'rent', 'return'].forEach(prop => {
                 if (f.properties[prop]) {
                     h3sum[fid][prop] = f.properties[prop];
                 }
@@ -63,12 +63,6 @@ function makeH3Sum(data) {
                     h3sum[fid][prop] = h3sum[fid][prop].map((x, idx) => x + f.properties[prop][idx]);
                 }
             });
-            if (f.properties.iconstyle) { // for iconstyle.color or colorneg
-                h3sum[fid].iconstyle = {
-                    ...h3sum[fid].iconstyle,
-                    ...f.properties.iconstyle,
-                };
-            }
         }
     });
     const ret = {
