@@ -1,0 +1,217 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>h3hexagonlayer</title>
+    <script src="https://unpkg.com/h3-js@^4.0.0"></script>
+    <script src="https://unpkg.com/deck.gl@^9.0.0/dist.min.js"></script>
+    <script src='https://unpkg.com/maplibre-gl@3.0.0/dist/maplibre-gl.js'></script>
+    <link href='https://unpkg.com/maplibre-gl@3.0.0/dist/maplibre-gl.css' rel='stylesheet' />
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <style type="text/css">
+    body {margin: 0; padding: 0;}
+    #map {width: 100vw; height: 100vh;}
+    .map-overlay {
+        position: absolute;
+        width: 170px;
+        top: 0;
+        left: 0;
+        padding: 0px;
+        background-color: #fff;
+    }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div class="map-overlay top">
+        <div class="map-overlay-inner">
+            <input id="slider" type="range" min="0" value="0" />
+        </div>
+        <div class="map-overlay-inner">
+            <button id="pauseButton">&#x23f8;</button>
+            <button id="playButton">&#x25b6;</button>
+        </div>
+        <div id="label"></div>
+    </div>
+    <script type="text/javascript">
+const urlParams = new URLSearchParams(document.location.search);
+let latlon = [35.7574, 139.7293];
+let latlonParam = urlParams.get('latlon');
+if (latlonParam) {
+    latlon = latlonParam.split(',').map(Number);
+}
+let zoom = +urlParams.get('zoom') || 11;
+let pitch = urlParams.has('pitch') ? +urlParams.get('pitch') : 0; // allow 0
+let interval = +urlParams.get('intervalMs') || 1000;
+const radiuskeyParam = urlParams.get('radiuskey');
+const serieskey = urlParams.get('serieskey');
+let mapStyle = urlParams.get('mapStyle') || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const filterProp = urlParams.get('filterProp');
+const filterPropValue = urlParams.get('filterPropValue');
+
+const jsonurl = urlParams.get('jsonurl') || 'https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M-capacity_h3.json';
+
+const slider = document.getElementById("slider");
+const pauseButton = document.getElementById("pauseButton");
+const playButton = document.getElementById("playButton");
+
+pauseButton.onclick = stopTimer;
+let timerId;
+function stopTimer() {
+    clearInterval(timerId);
+}
+
+const deckgl = new deck.DeckGL({
+    container: 'map',
+    mapStyle: mapStyle,
+    initialViewState: {
+        longitude: latlon[1],
+        latitude: latlon[0],
+        zoom: zoom,
+        pitch: pitch,
+        maxPitch: 85,
+    },
+    mapOptions: {
+        // https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/MapOptions/#maxpitch
+        maxPitch: 85, // XXX: >60 is experimental. may result in rendering issue
+    },
+    controller: true,
+    getTooltip: ({object}) => object && object.properties.tooltip,
+});
+
+const COLORS = ['#5a1846', '#c70039', '#e3611c', '#f1920e', '#ffc300']; // keperl.gl default color palette
+const COLORS_WITHNEG = d3.schemeRdBu[6].reverse();
+let radiuskey = radiuskeyParam;
+let time = 0;
+let colorScale;
+
+fetch(jsonurl).then(res => res.json()).then(json => loadData(json)).catch(console.error);
+function loadData(json) {
+    stopTimer();
+    if (filterProp && filterPropValue) {
+        json.features = json.features.filter(x => x[filterProp] == filterPropValue);
+    }
+
+    if (!latlonParam) {
+        // TODO: calc bounds
+        const [lat, lng] = h3.cellToLatLng(json.features[0].hex_id);
+        deckgl.setProps({
+            initialViewState: {
+                longitude: lng,
+                latitude: lat,
+                zoom: zoom,
+                pitch: pitch,
+                maxPitch: 85,
+            },
+        });
+    }
+    const values = json.features.flatMap(x => x[radiuskey]);
+    const colors = values.some(x => x < 0) ? COLORS_WITHNEG : COLORS;
+    colorScale = d3.scaleQuantile().range(colors).domain(values);
+
+    const [timeMin, timeMax, tick] = timeinterval(json.features);
+    time = timeMin;
+
+    slider.min = String(timeMin);
+    slider.max = String(timeMax);
+    slider.oninput = onSliderValueChange;
+    function onSliderValueChange(ev) {
+        time = Number(ev.target.value);
+        updateSliderLabel(time, json);
+        renderLayer(json);
+    }
+    function updateSliderLabel(time, json) {
+        const timeIdx = getTimeIdx(json.features[0], time);
+        const label = json.features[0].times.at(timeIdx);
+        document.getElementById("label").textContent = label;
+    }
+
+    playButton.onclick = startTimer;
+    function startTimer() {
+        stopTimer();
+        timerId = setInterval(() => {
+            slider.value = String(time);
+            updateSliderLabel(time, json);
+            if (time > timeMax) {
+                stopTimer();
+            } else {
+                renderLayer(json);
+            }
+            time += tick;
+        }, interval);
+    }
+    startTimer();
+}
+
+function timeinterval(data) {
+    let min = +Infinity;
+    let max = 0;
+    let mindiff = +Infinity;
+    data.forEach(d => {
+        const times = d.times;
+        if (!times) {
+            return;
+        }
+        const millis = times.map(Date.parse);
+        d._featureTimes = millis; // XXX: like Leaflet.TimeDimension
+        min = Math.min(min, ...millis);
+        max = Math.max(max, ...millis);
+        // TODO: diff on all times in all features
+        mindiff = millis.reduce((accum, cur, idx) => {
+            return Math.min(accum, cur - millis[idx - 1]);
+        });
+    });
+    return [min, max, mindiff];
+}
+
+function renderLayer(json) {
+    const layer = new deck.H3HexagonLayer({
+        id: 'H3HexagonLayer',
+        data: json.features,
+        getHexagon: d => d.hex_id,
+        extruded: false,
+        //getElevation: d => d[radiuskey],
+        //elevationScale: 20,
+        getFillColor: d => getColor(d, time),
+        updateTriggers: {
+            getFillColor: time,
+        },
+    });
+    deckgl.setProps({
+        layers: layer,
+    });
+}
+
+function getColor(d, time) {
+    const radius = getPointRadiusAtTime(d, time);
+    const rgbstr = colorScale(radius);
+    const rgb = rgbstr.slice(1).match(/.{2}/g).map(hex => parseInt(hex, 16));
+    return [...rgb, 200];
+}
+
+function getPointRadiusAtTime(d, time) {
+    const idx = getTimeIdx(d, time);
+    const radius = d[radiuskey].at(idx);
+    return radius;
+}
+
+function getTimeIdx(d, time) {
+    const featureTimes = d._featureTimes;
+    if (!featureTimes) {
+        return -1;
+    }
+    if (time < featureTimes[0]) {
+        return 0;
+    }
+    if (time >= featureTimes.at(-1)) {
+        return featureTimes.length - 1;
+    }
+    const idx = featureTimes.findIndex((t, i) => {
+        const tnext = featureTimes.at(i + 1);
+        return (time >= t && (tnext === undefined || time < tnext));
+    });
+    return idx;
+}
+    </script>
+</body>
+</html>
