@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width,
+    initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Make H3 hexagon sum data from TimestampedGeoJson</title>
+</head>
+<body>
+<h1>Make H3 hexagon sum data from TimestampedGeoJson</h1>
+<form>
+    <ul>
+        <li>Load TimestampedGeoJson file: <input type="file" id="fileElem" accept=".geojson" multiple /></li>
+    </ul>
+</form>
+</body>
+<script src="https://unpkg.com/h3-js"></script>
+<script>
+const fileInput = document.getElementById("fileElem");
+fileElem.addEventListener("change", () => {
+    Array.from(fileElem.files).forEach(file => {
+        file.text().then(text => {
+            const result = makeH3Sum(JSON.parse(text));
+            const outfname = file.name.replace(/\.geojson$/, '_h3.csv');
+            const outstr = result.map(row => row.join(',')).join('\n');
+            const outfile = new File([outstr], outfname, {
+              type: 'application/json'
+            });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(outfile);
+            a.download = outfile.name;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }).catch(console.error);
+    });
+    //fileElem.value = '';
+});
+
+function makeH3Sum(data) {
+    const h3sum = {};
+    data.features.forEach(f => {
+        const [systemId, stationId] = f.properties.popup.split(' ');
+        const [lng, lat] = f.geometry.coordinates;
+        const h3id = h3.latLngToCell(lat, lng, 8);
+        const fid = `${systemId} ${h3id}`;
+        if (!(fid in h3sum)) {
+            h3sum[fid] = {
+                hex_id: h3id, // kepler.gl uses 'hex_id'
+                systemId: systemId,
+            };
+            ['times', 'bikes', 'docks', 'capacity', 'rent', 'return'].forEach(prop => {
+                if (f.properties[prop]) {
+                    h3sum[fid][prop] = f.properties[prop];
+                }
+            });
+        } else {
+            ['bikes', 'docks', 'capacity', 'rent', 'return'].forEach(prop => {
+                if (!f.properties[prop]) {
+                    return;
+                }
+                if (!(prop in h3sum[fid])) {
+                    h3sum[fid][prop] = f.properties[prop];
+                } else {
+                    h3sum[fid][prop] = h3sum[fid][prop].map((x, idx) => x + f.properties[prop][idx]);
+                }
+            });
+        }
+    });
+    const rows = Object.values(h3sum).flatMap(x => {
+        return x.times.map((t, idx) => {
+            const row = [x.hex_id, x.systemId, t];
+            ['bikes', 'docks', 'capacity', 'rent', 'return'].forEach(prop => {
+                if (x[prop]) {
+                    row.push(x[prop][idx]);
+                }
+            });
+            return row;
+        });
+    });
+    const head = ['hex_id', 'systemId', 'time']
+        .concat(['bikes', 'docks', 'capacity', 'rent', 'return']
+            .filter(x => x in data.features[0].properties));
+    rows.unshift(head);
+    return rows;
+}
+</script>
+</html>
