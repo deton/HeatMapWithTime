@@ -201,14 +201,14 @@ function loadData(json, idx) {
 
     updateTimeFuncs[idx] = updateTime;
     function updateTime(tick) {
-        curTimes[idx] += tick;
         sliders[idx].value = String(curTimes[idx]);
         updateSliderLabel(curTimes[idx], json);
-        if (curTimes[idx] >= timeMax) {
+        if (curTimes[idx] > timeMax) {
             stopTimer(idx);
         } else {
             renderLayer(json, curTimes[idx], idx);
         }
+        curTimes[idx] += tick;
     }
 
     playButtons[idx].onclick = startTimer;
