@@ -80,13 +80,11 @@ const radiuskeyParam = urlParams.get('radiuskey');
 let mapStyle = urlParams.get('mapStyle') || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 
 const intervals = urlParams.getAll('intervalMs').map(Number);
-if (intervals.length === 0) {
-    intervals.push(1000);
+while (intervals.length < 2) {
     intervals.push(1000);
 }
 const offsets = urlParams.getAll('offsetMinute').map(minute => +minute * 60000);
-if (offsets.length === 0) {
-    offsets.push(0);
+while (offsets.length < 2) {
     offsets.push(0);
 }
 const jsonurls = urlParams.getAll('jsonurl');
