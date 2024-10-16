@@ -181,8 +181,9 @@ function renderLayer(json) {
     };
     if (elevationScale > 0) {
         layercfg.extruded = true;
-        layercfg.getElevation = d => Math.abs(d[radiuskey]);
+        layercfg.getElevation = d => Math.abs(getPointRadiusAtTime(d, time));
         layercfg.elevationScale = elevationScale;
+        layercfg.updateTriggers['getElevation'] = time;
     }
     deckgl.setProps({
         layers: new deck.H3HexagonLayer(layercfg),
