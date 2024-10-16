@@ -39,6 +39,7 @@ if (latlonParam) {
 }
 let zoom = +urlParams.get('zoom') || 10;
 let pitch = urlParams.has('pitch') ? +urlParams.get('pitch') : 20; // allow 0
+let bearing = +urlParams.get('bearing') || 0;
 let interval = +urlParams.get('intervalMs') || 1000;
 let radius = +urlParams.get('radius') || 500;
 let elevationScale = +urlParams.get('elevationScale') || 20;
@@ -77,6 +78,7 @@ const deckgl = new deck.DeckGL({
         latitude: latlon[0],
         zoom: zoom,
         pitch: pitch,
+        bearing: bearing,
         maxPitch: 85,
     },
     mapOptions: {
@@ -99,6 +101,7 @@ function loadData(json) {
                 latitude: latlon[0],
                 zoom: zoom,
                 pitch: pitch,
+                bearing: bearing,
                 maxPitch: 85,
             },
         });
