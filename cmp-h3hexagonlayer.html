@@ -75,8 +75,10 @@ if (latlonParam) {
     latlon = latlonParam.split(',').map(Number);
 }
 let zoom = +urlParams.get('zoom') || 11;
-let pitch = urlParams.has('pitch') ? +urlParams.get('pitch') : 0; // allow 0
+let pitch = +urlParams.get('pitch') || 0;
+let bearing = +urlParams.get('bearing') || 0;
 const radiuskeyParam = urlParams.get('radiuskey');
+let elevationScale = +urlParams.get('elevationScale') || 0;
 let mapStyle = urlParams.get('mapStyle') || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 const filterProp = urlParams.get('filterProp');
 const filterPropValue = urlParams.get('filterPropValue');
@@ -130,6 +132,7 @@ const map = new maplibregl.Map({
     center: [latlon[1], latlon[0]],
     zoom: zoom,
     pitch: pitch,
+    bearing: bearing,
     maxPitch: 85,
 });
 const overlay = new deck.MapboxOverlay({layers: []});
@@ -170,6 +173,7 @@ function loadData(json, idx) {
             center: [lng, lat],
             zoom: zoom,
             pitch: pitch,
+            bearing: bearing,
         });
     }
     const valuekeys = json.valuekeys || [];
@@ -261,7 +265,7 @@ function timeinterval(features) {
 
 function renderLayer() {
     const layers = jsons.map((json, idx) => {
-        return new deck.H3HexagonLayer({
+        const layercfg = {
             id: `H3HexagonLayer-${idx}`,
             data: json.features,
             getHexagon: d => d.hex_id,
@@ -272,7 +276,14 @@ function renderLayer() {
             updateTriggers: {
                 getFillColor: curTimes[idx],
             },
-        });
+        };
+        if (elevationScale > 0) {
+            layercfg.extruded = true;
+            layercfg.getElevation = d => Math.abs(getPointRadiusAtTime(d, curTimes[idx]));
+            layercfg.elevationScale = elevationScale;
+            layercfg.updateTriggers['getElevation'] = curTimes[idx];
+        }
+        return new deck.H3HexagonLayer(layercfg);
     });
     overlay.setProps({
         layers: layers,

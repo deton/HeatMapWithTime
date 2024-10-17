@@ -41,10 +41,11 @@ if (latlonParam) {
     latlon = latlonParam.split(',').map(Number);
 }
 let zoom = +urlParams.get('zoom') || 11;
-let pitch = urlParams.has('pitch') ? +urlParams.get('pitch') : 0; // allow 0
+let pitch = +urlParams.get('pitch') || 0;
+let bearing = +urlParams.get('bearing') || 0;
 let interval = +urlParams.get('intervalMs') || 1000;
 const radiuskeyParam = urlParams.get('radiuskey');
-const serieskey = urlParams.get('serieskey');
+let elevationScale = +urlParams.get('elevationScale') || 0;
 let mapStyle = urlParams.get('mapStyle') || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 const filterProp = urlParams.get('filterProp');
 const filterPropValue = urlParams.get('filterPropValue');
@@ -69,6 +70,7 @@ const deckgl = new deck.DeckGL({
         latitude: latlon[0],
         zoom: zoom,
         pitch: pitch,
+        bearing: bearing,
         maxPitch: 85,
     },
     mapOptions: {
@@ -101,12 +103,14 @@ function loadData(json) {
                 latitude: lat,
                 zoom: zoom,
                 pitch: pitch,
+                bearing: bearing,
                 maxPitch: 85,
             },
         });
     }
     const values = json.features.flatMap(x => x[radiuskey]);
     const colors = values.some(x => x < 0) ? COLORS_WITHNEG : COLORS;
+    // TODO: not use red in COLORS_WITHNEG for negative values
     colorScale = d3.scaleQuantile().range(colors).domain(values);
 
     const [timeMin, timeMax, tick] = timeinterval(json.features);
@@ -165,20 +169,24 @@ function timeinterval(data) {
 }
 
 function renderLayer(json) {
-    const layer = new deck.H3HexagonLayer({
+    const layercfg = {
         id: 'H3HexagonLayer',
         data: json.features,
         getHexagon: d => d.hex_id,
         extruded: false,
-        //getElevation: d => d[radiuskey],
-        //elevationScale: 20,
         getFillColor: d => getColor(d, time),
         updateTriggers: {
             getFillColor: time,
         },
-    });
+    };
+    if (elevationScale > 0) {
+        layercfg.extruded = true;
+        layercfg.getElevation = d => Math.abs(getPointRadiusAtTime(d, time));
+        layercfg.elevationScale = elevationScale;
+        layercfg.updateTriggers['getElevation'] = time;
+    }
     deckgl.setProps({
-        layers: layer,
+        layers: new deck.H3HexagonLayer(layercfg),
     });
 }
 
@@ -186,7 +194,7 @@ function getColor(d, time) {
     const radius = getPointRadiusAtTime(d, time);
     const rgbstr = colorScale(radius);
     const rgb = rgbstr.slice(1).match(/.{2}/g).map(hex => parseInt(hex, 16));
-    return [...rgb, 200];
+    return [...rgb, 230];
 }
 
 function getPointRadiusAtTime(d, time) {
