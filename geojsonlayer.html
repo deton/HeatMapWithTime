@@ -74,7 +74,7 @@ const deckgl = new deck.DeckGL({
         maxPitch: 85, // XXX: >60 is experimental. may result in rendering issue
     },
     controller: true,
-    getTooltip: ({object}) => object && object.properties.tooltip,
+    getTooltip: ({object}) => object && object.properties.popup,
 });
 
 let radiuskey = radiuskeyParam;
@@ -169,6 +169,7 @@ function renderLayer(json) {
             getFillColor: time,
             getLineColor: time,
         },
+        pickable: true,
     };
     if (json.features[0].properties.iconstyle0) {
         layercfg.pointType = 'circle+icon';

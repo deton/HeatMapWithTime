@@ -131,7 +131,10 @@ for (let i = 0; i < 2; i++) {
         pitch: pitch,
         maxPitch: 85,
     }));
-    overlays.push(new deck.MapboxOverlay({layers: []}));
+    overlays.push(new deck.MapboxOverlay({
+        layers: [],
+        getTooltip: ({object}) => object && object.properties.popup,
+    }));
     maps[i].addControl(overlays[i]);
 }
 syncMaps(maps[0], maps[1]);
@@ -260,6 +263,7 @@ function renderLayer(json, time, idx) {
         updateTriggers: {
             getPointRadius: time,
         },
+        pickable: true,
     };
     if (json.features[0].properties.iconstyle0) {
         layercfg.pointType = 'circle+icon';
