@@ -72,9 +72,11 @@ if (latlon) {
     let zoom = +urlParams.get('zoom') || 13;
     map.setView(latlon, zoom);
 }
-const jsonurl = urlParams.get('jsonurl');
-if (jsonurl) {
-  fetch(jsonurl).then(res => res.json()).then(json => loadData(json)).catch(console.error);
+if (urlParams.has('jsonurl')) {
+    urlParams.getAll('jsonurl').forEach(jsonurl => {
+        const fname = new URL(jsonurl).pathname.split('/').pop();
+        fetch(jsonurl).then(res => res.json()).then(json => loadData(json, fname)).catch(console.error);
+    });
 }
 const radiuskeyParam = urlParams.get('radiuskey');
 const opacitykey = urlParams.get('opacitykey');
@@ -87,7 +89,7 @@ fileElem.addEventListener("change", () => {
     const [file] = fileElem.files;
     if (file) {
         file.text().then(text => {
-            loadData(JSON.parse(text));
+            loadData(JSON.parse(text), file.name);
         }).catch(console.error);
     }
     //fileElem.value = '';
@@ -112,11 +114,13 @@ map.addControl(tdControl);
 
 let iconDLayer;
 
-function loadData(data) {
+function loadData(data, filename) {
     // keep original times not to be overridden by millis array by L.TimeDimension.
+    let hasTimes = false;
     data.features.forEach(feature => {
         if (feature.properties.times) {
             feature.properties.origTimes = [...feature.properties.times];
+            hasTimes = true;
         }
     });
     const valuekeys = data.valuekeys || [];
@@ -154,9 +158,6 @@ function loadData(data) {
         opacityCfg.max = Math.max(...opacityCfg.timesMax);
     }
 
-    if (iconDLayer) {
-        iconDLayer.remove();
-    }
     // TODO: make geojson layers for each system_id to control toggle display
     const geojsonOptions = {
         pointToLayer: (feature, latLng) => {
@@ -179,6 +180,15 @@ function loadData(data) {
     if (!latlon) {
         map.fitBounds(iconLayer.getBounds());
     }
+    if (!hasTimes) { // add geojson layer if no times. (instead of replacing)
+        iconLayer.addTo(map);
+        layerControl.addOverlay(iconLayer, filename);
+        return;
+    }
+    //if (iconDLayer) {
+    //    layerControl.remove(iconDLayer);
+    //    iconDLayer.remove();
+    //}
     // iconD layer to show the change of the icon
     iconDLayer = L.timeDimension.layer.geoJson(iconLayer, {
         updateTimeDimension: true,
@@ -186,6 +196,7 @@ function loadData(data) {
         updateTimeDimensionMode: 'replace',
     });
     iconDLayer.addTo(map);
+    layerControl.addOverlay(iconDLayer, filename);
 }
 
 // based on https://github.com/python-visualization/folium/blob/553a33981fa29a9d4ce6c426563749188906610f/folium/plugins/timestamped_geo_json.py#L102
@@ -295,7 +306,7 @@ function styleFunc(feature, opacityCfg) {
     if (!feature.properties.style) {
         return {};
     }
-    if (!opacityCfg.key) {
+    if (!opacityCfg.key || !(opacityCfg.key in feature.properties)) {
         return feature.properties.style;
     }
     const idx = getTimeIdx(feature.properties.times);
