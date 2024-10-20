@@ -50,7 +50,7 @@ docomo-cycle,00000001,38.269793,140.874203,2024-08-15T00:32,5,15,15
 </pre>
 </body>
 <script>
-const fileInput = document.getElementById("fileElem");
+const fileElem = document.getElementById("fileElem");
 fileElem.addEventListener("change", () => {
     Array.from(fileElem.files).forEach(file => {
         file.text().then(text => {

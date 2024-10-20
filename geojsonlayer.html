@@ -17,6 +17,9 @@
         padding: 0px;
         background-color: #fff;
     }
+    input[type="file"] {
+        display: none;
+    }
     </style>
   </head>
   <body>
@@ -29,6 +32,7 @@
             <button id="pauseButton">&#x23f8;</button>
             <button id="playButton">&#x25b6;</button>
         </div>
+        <input type="file" id="fileElem" accept=".geojson" />
         <div id="label"></div>
     </div>
     <script type="text/javascript">
@@ -46,8 +50,22 @@ const radiusScale = +urlParams.get('radiusScale') || 10;
 let mapStyle = urlParams.get('mapStyle') || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 const filterParam = urlParams.get('filter');
 
-const jsonurl = urlParams.get('jsonurl') || 'https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M-capacity.geojson';
-fetch(jsonurl).then(res => res.json()).then(json => loadData(json)).catch(console.error);
+const jsonurl = urlParams.get('jsonurl'); // || 'https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M-capacity.geojson';
+if (jsonurl) {
+    fetch(jsonurl).then(res => res.json()).then(json => loadData(json)).catch(console.error);
+} else {
+    const fileElem = document.getElementById("fileElem");
+    fileElem.style.display = "block";
+    fileElem.addEventListener("change", () => {
+        fileElem.style.display = "none";
+        const [file] = fileElem.files;
+        if (file) {
+            file.text().then(text => {
+                loadData(JSON.parse(text));
+            }).catch(console.error);
+        }
+    });
+}
 
 const slider = document.getElementById("slider");
 const pauseButton = document.getElementById("pauseButton");

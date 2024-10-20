@@ -39,6 +39,9 @@
       .maplibregl-popup {
           z-index: 2;
       }
+      input[type="file"] {
+          display: none;
+      }
     </style>
   </head>
   <body>
@@ -55,6 +58,7 @@
             <button id="playButton0">&#x25b6;</button>
             <input type="checkbox" id="sync" name="sync"/><label for="sync">Sync</label>
         </div>
+        <input type="file" id="fileElem" accept=".geojson" multiple />
         <div id="label0"></div>
     </div>
     <div class="map-overlay-right top">
@@ -86,10 +90,6 @@ while (intervals.length < 2) {
 const offsets = urlParams.getAll('offsetMinute').map(minute => +minute * 60000);
 while (offsets.length < 2) {
     offsets.push(0);
-}
-const jsonurls = urlParams.getAll('jsonurl');
-if (jsonurls.length === 0) {
-    jsonurls.push('https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M-capacity.geojson');
 }
 
 const sliders = [];
@@ -142,16 +142,36 @@ syncMaps(maps[0], maps[1]);
 const syncCheckbox = document.getElementById("sync");
 syncCheckbox.checked = urlParams.get("sync");
 
-if (jsonurls.length >= 2) {
+const jsonurls = urlParams.getAll('jsonurl');
+if (jsonurls.length === 0) {
+    //jsonurls.push('https://deton.github.io/HeatMapWithTime/sampledata/15-PT30M-capacity.geojson');
+    const fileElem = document.getElementById("fileElem");
+    fileElem.style.display = "block";
+    fileElem.addEventListener("change", () => {
+        fileElem.style.display = "none";
+        const files = Array.from(fileElem.files);
+        files.forEach((file, idx) => {
+            file.text().then(text => {
+                const json = JSON.parse(text);
+                loadData(json, idx);
+                if (files.length < 2) {
+                    loadData(json, 1);
+                }
+            }).catch(console.error);
+        });
+    });
+} else if (jsonurls.length >= 2) {
     fetch(jsonurls[1]).then(res => res.json()).then(json => loadData(json, 1)).catch(console.error);
 }
-fetch(jsonurls[0]).then(res => res.json())
-    .then(json => {
-        loadData(json, 0);
-        if (jsonurls.length < 2) {
-            loadData(json, 1);
-        }
-    }).catch(console.error);
+if (jsonurls.length >= 1) {
+    fetch(jsonurls[0]).then(res => res.json())
+        .then(json => {
+            loadData(json, 0);
+            if (jsonurls.length < 2) {
+                loadData(json, 1);
+            }
+        }).catch(console.error);
+}
 
 let radiuskey = radiuskeyParam;
 let commonTick = Infinity;

@@ -143,7 +143,7 @@ if (jsonurl) {
   fetch(jsonurl).then(res => res.json()).then(json => loadData(json)).catch(console.error);
 }
 
-const fileInput = document.getElementById("fileElem");
+const fileElem = document.getElementById("fileElem");
 fileElem.addEventListener("change", () => {
     const [file] = fileElem.files;
     if (file) {

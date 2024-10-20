@@ -16,7 +16,7 @@
 </form>
 </body>
 <script>
-const fileInput = document.getElementById("fileElem");
+const fileElem = document.getElementById("fileElem");
 fileElem.addEventListener("change", () => {
     const files = Array.from(fileElem.files);
     Promise.all(files.map(file => {
