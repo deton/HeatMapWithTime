@@ -70,7 +70,7 @@ Output data example:
 </pre>
 </body>
 <script>
-const fileInput = document.getElementById("fileElem");
+const fileElem = document.getElementById("fileElem");
 fileElem.addEventListener("change", () => {
     Array.from(fileElem.files).forEach(file => {
         file.text().then(text => {

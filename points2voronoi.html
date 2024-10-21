@@ -29,7 +29,7 @@ Using <a href="https://turfjs.org/docs/api/voronoi">voronoi()</a> of Turf.js.
 </body>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
 <script>
-const fileInput = document.getElementById("fileElem");
+const fileElem = document.getElementById("fileElem");
 fileElem.addEventListener("change", () => {
     Array.from(fileElem.files).forEach(file => {
         file.text().then(text => {

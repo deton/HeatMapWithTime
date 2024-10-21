@@ -84,7 +84,7 @@ const opacityRange = urlParams.get('opacityRange') || 'all';
 const colors = urlParams.getAll('color');
 const filter0 = urlParams.get('filter') === '0';
 
-const fileInput = document.getElementById("fileElem");
+const fileElem = document.getElementById("fileElem");
 fileElem.addEventListener("change", () => {
     const [file] = fileElem.files;
     if (file) {

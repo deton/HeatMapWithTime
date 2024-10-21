@@ -16,7 +16,7 @@
 </body>
 <script src="https://unpkg.com/h3-js"></script>
 <script>
-const fileInput = document.getElementById("fileElem");
+const fileElem = document.getElementById("fileElem");
 fileElem.addEventListener("change", () => {
     Array.from(fileElem.files).forEach(file => {
         file.text().then(text => {
