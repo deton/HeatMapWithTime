@@ -69,6 +69,7 @@ function makeDiff(geojsons, isSum, isTimeDiff) {
     const len = Math.min(
         geojsons[0].features[0].properties.times.length,
         geojsons[1].features[0].properties.times.length);
+    let sumtime;
     const stations = [];
     geojsons[1].features.forEach(f => {
         if (!(f.properties.popup in oldStations)) { // new station
@@ -86,7 +87,10 @@ function makeDiff(geojsons, isSum, isTimeDiff) {
                 },
             };
             if (isSum) {
-                sumProps(fnew, isTimeDiff);
+                if (sumtime === undefined) {
+                    sumtime = fnew.properties.times.at(-1);
+                }
+                sumProps(fnew, isTimeDiff, sumtime);
             }
             updateStyle(fnew);
             stations.push(fnew);
@@ -106,7 +110,12 @@ function makeDiff(geojsons, isSum, isTimeDiff) {
             },
         };
         if (isSum) {
-            sumProps(fnew, isTimeDiff);
+            if (sumtime === undefined) {
+                sumtime = fnew.properties.times.at(-1);
+                // XXX: use common time for sum data.
+                //      (some features may have shorter times[])
+            }
+            sumProps(fnew, isTimeDiff, sumtime);
         }
         updateStyle(fnew);
         stations.push(fnew);
@@ -128,7 +137,10 @@ function makeDiff(geojsons, isSum, isTimeDiff) {
             },
         };
         if (isSum) {
-            sumProps(fnew, isTimeDiff);
+            if (sumtime === undefined) {
+                sumtime = fnew.properties.times.at(-1);
+            }
+            sumProps(fnew, isTimeDiff, sumtime);
         }
         updateStyle(fnew);
         stations.push(fnew);
@@ -159,8 +171,8 @@ function updateStyle(f) {
     }
 }
 
-function sumProps(f, isTimeDiff) {
-    f.properties.times = [f.properties.times.at(-1)];
+function sumProps(f, isTimeDiff, sumtime) {
+    f.properties.times = [sumtime];
     if (isTimeDiff && f.properties.bikes) {
         // count as rent if number of bikes are smaller than previous time
         const rentsum = f.properties.bikes.reduce((accum, cur) => {

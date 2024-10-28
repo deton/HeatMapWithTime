@@ -57,7 +57,7 @@
         <div class="map-overlay-inner">
             <button id="pauseButton0">&#x23f8;</button>
             <button id="playButton0">&#x25b6;</button>
-            <input type="checkbox" id="sync" name="sync"/><label for="sync">Sync</label>
+            <input type="checkbox" id="sync" name="sync"/><label for="sync" id="syncLabel">Sync</label>
         </div>
         <input type="file" id="fileElem" accept=".geojson" multiple />
         <div id="label0"></div>
@@ -201,6 +201,13 @@ function loadData(json, idx) {
     commonTick = Math.min(tick, commonTick);
     curTimes[idx] = timeMin + offsets[idx];
 
+    if (timeMin >= timeMax) {
+        sliders[idx].style.display = "none";
+        playButtons[idx].style.display = "none";
+        pauseButtons[idx].style.display = "none";
+        document.getElementById("sync").style.display = "none";
+        document.getElementById("syncLabel").style.display = "none";
+    }
     sliders[idx].min = String(timeMin);
     sliders[idx].max = String(timeMax);
     sliders[idx].oninput = onSliderValueChange;

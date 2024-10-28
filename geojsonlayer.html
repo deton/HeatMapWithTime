@@ -120,6 +120,11 @@ function loadData(json) {
     const [timeMin, timeMax, tick] = timeinterval(json.features);
     time = timeMin;
 
+    if (timeMin >= timeMax) {
+        slider.style.display = "none";
+        playButton.style.display = "none";
+        pauseButton.style.display = "none";
+    }
     slider.min = String(timeMin);
     slider.max = String(timeMax);
     slider.oninput = onSliderValueChange;
