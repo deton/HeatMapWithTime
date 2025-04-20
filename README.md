@@ -9,6 +9,7 @@
   * Change radius of circle
 * cmp.html: Dual maps of GeoJsonLayer
 * HexagonLayer: deck.gl HexagonLayer with time slider for heatmap json data
+* IconPositionWithTime: deck.gl IconLayer with time slider for TimestampedGeoJson data
 
 ## HeatMapWithTime
 Heatmap with Leaflet.TimeDimension (based on folium.plugins.HeatMapWithTime).
@@ -141,3 +142,6 @@ deck.gl HexagonLayer with time slider for heatmap json data.
     * MLIT Japan. [国土数値情報 土地利用詳細メッシュデータ](https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-L03-b-c-2021.html). [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode)
 * sampledata2/ : Bay Wheels
 * sampledata3/ : Vélib' Metropole
+* sampledata4/gtfsStopsTimestamped.geojson:
+  * This sample data use the following copyrighted material with [modifications](https://gist.github.com/deton/8c4bd41faa4060dfa4a68066a5403be3#file-gtfs2timestampedgeojson-ipynb).
+    * [公開元: 横須賀市 CC BY 4.0](https://gtfs-data.jp/search?target_feed=yokosukacity*hamachanbus)
