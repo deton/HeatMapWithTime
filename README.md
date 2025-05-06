@@ -108,6 +108,22 @@ deck.gl HexagonLayer with time slider for heatmap json data.
   * intervalMs: animation timer interval in milliseconds. (default: 1000)
   * jsonurl: heatmap json URL to load
 
+## IconPositionWithTime
+deck.gl IconLayer with time slider for TimestampedGeoJson data.
+
+* [IconPositionWithTime.html](https://deton.github.io/HeatMapWithTime/IconPositionWithTime.html?jsonurl=https://deton.github.io/HeatMapWithTime/sampledata4/gtfsShapeTimestamped.geojson)
+
+![IconPositionWithTime.png](https://github.com/user-attachments/assets/4570b7a5-8b10-4a14-bc07-7c2411d925d6)
+
+* URL parameters
+  * latlon: map center. (default: first latlon in json data)
+  * zoom (default: 14)
+  * pitch (default: 0)
+  * [mapStyle](https://deck.gl/docs/api-reference/core/deckgl#mapstyle) (default: `https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json`)
+  * intervalMs: animation timer interval in milliseconds. (default: 300)
+  * tickMs: time increment on each interval in milliseconds. (default: 10000)
+  * jsonurl: heatmap json URL to load
+
 ## Other files
 * [gbfshist2heatmap.html](https://deton.github.io/HeatMapWithTime/gbfshist2heatmap.html): Make heatmap json for heatmapwithtime.html from gbfshist.ndjson
   * Sample input: sampledata/15-PT30M.ndjson
@@ -142,6 +158,6 @@ deck.gl HexagonLayer with time slider for heatmap json data.
     * MLIT Japan. [国土数値情報 土地利用詳細メッシュデータ](https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-L03-b-c-2021.html). [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode)
 * sampledata2/ : Bay Wheels
 * sampledata3/ : Vélib' Metropole
-* sampledata4/gtfsStopsTimestamped.geojson:
-  * This sample data use the following copyrighted material with [modifications](https://gist.github.com/deton/8c4bd41faa4060dfa4a68066a5403be3#file-gtfs2timestampedgeojson-ipynb).
+* sampledata4/ :
+  * These sample data use the following copyrighted material with [modifications](https://gist.github.com/deton/8c4bd41faa4060dfa4a68066a5403be3#file-gtfs2timestampedgeojson-ipynb).
     * [公開元: 横須賀市 CC BY 4.0](https://gtfs-data.jp/search?target_feed=yokosukacity*hamachanbus)
