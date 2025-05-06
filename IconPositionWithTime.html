@@ -44,9 +44,9 @@ if (latlonParam) {
 }
 let zoom = +urlParams.get('zoom') || 14;
 let pitch = urlParams.has('pitch') ? +urlParams.get('pitch') : 0; // allow 0
-let interval = +urlParams.get('intervalMs') || 1000;
+let interval = +urlParams.get('intervalMs') || 300;
+let tick = +urlParams.get('tickMs') || 10000;
 let mapStyle = urlParams.get('mapStyle') || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
-const filterParam = urlParams.get('filter');
 
 const jsonurl = urlParams.get('jsonurl');
 if (jsonurl) {
@@ -110,7 +110,7 @@ function loadData(json) {
         });
     }
 
-    const [timeMin, timeMax, tick] = timeinterval(json.features);
+    const [timeMin, timeMax] = timeinterval(json.features);
     time = timeMin;
     const tripFeatures = json.features.filter(f => f._featureTimes);
 
@@ -152,7 +152,6 @@ function loadData(json) {
 function timeinterval(features) {
     let min = +Infinity;
     let max = 0;
-    let mindiff = +Infinity;
     features.forEach((feature, idx) => {
         const times = feature.properties.times;
         if (!times) {
@@ -167,18 +166,11 @@ function timeinterval(features) {
         feature._featureTimes = millis; // XXX: like Leaflet.TimeDimension
         min = Math.min(min, ...millis);
         max = Math.max(max, ...millis);
-        // TODO: diff on all times in all features
-        mindiff = millis.reduce((accum, cur, idx) => {
-            return Math.min(accum, cur - millis[idx - 1]);
-        });
     });
     if (!Number.isFinite(min)) {
         min = 0;
     }
-    if (!Number.isFinite(mindiff)) {
-        mindiff = 0;
-    }
-    return [min, max, mindiff];
+    return [min, max];
 }
 
 function renderLayer(json, tripFeatures) {
