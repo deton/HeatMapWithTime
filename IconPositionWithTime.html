@@ -1,0 +1,284 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Update icon position in TimestampedGeoJson</title>
+    <script src="https://unpkg.com/deck.gl@^9.0.0/dist.min.js"></script>
+    <script src='https://unpkg.com/maplibre-gl@3.0.0/dist/maplibre-gl.js'></script>
+    <link href='https://unpkg.com/maplibre-gl@3.0.0/dist/maplibre-gl.css' rel='stylesheet' />
+    <style type="text/css">
+    body {margin: 0; padding: 0;}
+    #map {width: 100vw; height: 100vh;}
+    .map-overlay {
+        position: absolute;
+        width: 200px;
+        top: 0;
+        left: 0;
+        padding: 0px;
+        background-color: #fff;
+    }
+    input[type="file"] {
+        display: none;
+    }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div class="map-overlay top">
+        <div class="map-overlay-inner">
+            <input id="slider" type="range" min="0" value="0" />
+        </div>
+        <div class="map-overlay-inner">
+            <button id="pauseButton">&#x23f8;</button>
+            <button id="playButton">&#x25b6;</button>
+        </div>
+        <input type="file" id="fileElem" accept=".geojson" />
+        <div id="label"></div>
+    </div>
+    <script type="text/javascript">
+const urlParams = new URLSearchParams(document.location.search);
+let latlon = [35.7574, 139.7293];
+let latlonParam = urlParams.get('latlon');
+if (latlonParam) {
+    latlon = latlonParam.split(',').map(Number);
+}
+let zoom = +urlParams.get('zoom') || 14;
+let pitch = urlParams.has('pitch') ? +urlParams.get('pitch') : 0; // allow 0
+let interval = +urlParams.get('intervalMs') || 300;
+let tick = +urlParams.get('tickMs') || 10000;
+let mapStyle = urlParams.get('mapStyle') || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+
+const jsonurl = urlParams.get('jsonurl');
+if (jsonurl) {
+    fetch(jsonurl).then(res => res.json()).then(json => loadData(json)).catch(console.error);
+} else {
+    const fileElem = document.getElementById("fileElem");
+    fileElem.style.display = "block";
+    fileElem.addEventListener("change", () => {
+        fileElem.style.display = "none";
+        const [file] = fileElem.files;
+        if (file) {
+            file.text().then(text => {
+                loadData(JSON.parse(text));
+            }).catch(console.error);
+        }
+    });
+}
+
+const slider = document.getElementById("slider");
+const pauseButton = document.getElementById("pauseButton");
+const playButton = document.getElementById("playButton");
+
+pauseButton.onclick = stopTimer;
+let timerId;
+function stopTimer() {
+    clearInterval(timerId);
+}
+
+const deckgl = new deck.DeckGL({
+    container: 'map',
+    mapStyle: mapStyle,
+    initialViewState: {
+        longitude: latlon[1],
+        latitude: latlon[0],
+        zoom: zoom,
+        pitch: pitch,
+        maxPitch: 85,
+    },
+    mapOptions: {
+        // https://maplibre.org/maplibre-gl-js/docs/API/type-aliases/MapOptions/#maxpitch
+        maxPitch: 85, // XXX: >60 is experimental. may result in rendering issue
+    },
+    controller: true,
+    getTooltip: ({object}) => object && object.properties.popup,
+});
+
+let time = 0;
+function loadData(json) {
+    stopTimer();
+
+    if (!latlonParam) {
+        const lonlat = json.features[0].geometry.coordinates; // TODO: calc bounds
+        deckgl.setProps({
+            initialViewState: {
+                longitude: lonlat[0],
+                latitude: lonlat[1],
+                zoom: zoom,
+                pitch: pitch,
+                maxPitch: 85,
+            },
+        });
+    }
+
+    const [timeMin, timeMax] = timeinterval(json.features);
+    time = timeMin;
+    const tripFeatures = json.features.filter(f => f._featureTimes);
+
+    if (timeMin >= timeMax) {
+        slider.style.display = "none";
+        playButton.style.display = "none";
+        pauseButton.style.display = "none";
+    }
+    slider.min = String(timeMin);
+    slider.max = String(timeMax);
+    slider.oninput = onSliderValueChange;
+    function onSliderValueChange(ev) {
+        time = Number(ev.target.value);
+        updateSliderLabel(time);
+        renderLayer(json, tripFeatures);
+    }
+    function updateSliderLabel(time) {
+        const label = (new Date(time)).toISOString().replace(/\.\d{3}/, '');
+        document.getElementById("label").textContent = label;
+    }
+
+    playButton.onclick = startTimer;
+    function startTimer() {
+        stopTimer();
+        timerId = setInterval(() => {
+            slider.value = String(time);
+            updateSliderLabel(time);
+            if (time > timeMax) {
+                stopTimer();
+            } else {
+                renderLayer(json, tripFeatures);
+            }
+            time += tick;
+        }, interval);
+    }
+    startTimer();
+}
+
+function timeinterval(features) {
+    let min = +Infinity;
+    let max = 0;
+    features.forEach((feature, idx) => {
+        const times = feature.properties.times;
+        if (!times) {
+            return;
+        }
+        const millis = times.map(t => {
+            if (typeof t === 'string') {
+                return Date.parse(t);
+            }
+            return t;
+        });
+        feature._featureTimes = millis; // XXX: like Leaflet.TimeDimension
+        min = Math.min(min, ...millis);
+        max = Math.max(max, ...millis);
+    });
+    if (!Number.isFinite(min)) {
+        min = 0;
+    }
+    return [min, max];
+}
+
+function renderLayer(json, tripFeatures) {
+    const layers = [
+        new deck.GeoJsonLayer({
+            id: 'geojson-layer',
+            data: json,
+            pointType: 'circle',
+            getPointRadius: 10,
+            pickable: true,
+            getFillColor: f => getColor(f, true),
+            getLineColor: f => getColor(f, false),
+            getLineWidth: f => getLineWidth(f, time),
+            updateTriggers: {
+                getLineWidth: time,
+            },
+        }),
+        new deck.IconLayer({
+            id: 'icon-layer',
+            data: tripFeatures,
+            getColor: f => getColor(f, false),
+            getIcon: f => getIcon(f),
+            getPosition: f => getPosition(f, time),
+            getSize: f => getSize(f),
+            sizeMinPixels: 2,
+            updateTriggers: {
+                getPosition: time,
+            },
+        }),
+    ];
+    deckgl.setProps({layers: layers});
+}
+
+function getPosition(feature, time) {
+    const coords = feature.geometry.coordinates;
+    if (feature.geometry.type === 'Point') {
+        return coords;
+    }
+    if (feature.geometry.type !== 'LineString') {
+        return [null, null];
+    }
+    const featureTimes = feature._featureTimes;
+    if (!featureTimes || time < featureTimes[0] || time > featureTimes.at(-1)) {
+        return [null, null];
+    }
+    // https://stackoverflow.com/questions/59636420/is-it-possible-to-animate-moving-icons-in-deck-gl
+    for (let i = 0; i < featureTimes.length - 1; i++) {
+        const t = featureTimes[i];
+        const tnext = featureTimes[i+1];
+        if (time >= t && time < tnext) {
+            const frac = (time - t) / (tnext - t);
+            const x = ((coords[i+1][0] - coords[i][0]) * frac) + coords[i][0];
+            const y = ((coords[i+1][1] - coords[i][1]) * frac) + coords[i][1];
+            return [x, y];
+        }
+    }
+    return [null, null];
+}
+
+function getLineWidth(feature, time) {
+    const featureTimes = feature._featureTimes;
+    if (!featureTimes) {
+        return 4;
+    }
+    if (time < featureTimes[0] || time > featureTimes.at(-1)) {
+        return 0; // hide line
+    }
+    return 4;
+}
+
+function getColor(feature, isfill) {
+    const color = feature.properties.iconstyle?.color || feature.properties.style?.color;
+    if (!color || !color.match(/^#[0-9a-fA-F]{6}/)) {
+        return [255, 0, 0, isfill ? 153 : 255];
+    }
+    const rgb = color.slice(1).match(/.{2}/g).map(hex => parseInt(hex, 16));
+    return [...rgb, isfill ? 153 : 255];
+}
+
+function getIcon(feature) {
+    const iconstyle = feature.properties.iconstyle;
+    if (!iconstyle) {
+        return {
+            url: 'https://deton.github.io/folium_tripslayer/car.svg', // TODO: bus
+            width: 24,
+            height: 24,
+            anchorX: 12,
+            anchorY: 12,
+            mask: true, // XXX: ignore color of icon image
+        };
+    }
+    return {
+        url: iconstyle.iconUrl,
+        width: iconstyle.iconSize[0],
+        height: iconstyle.iconSize[1],
+        anchorX: iconstyle.iconAnchor[0],
+        anchorY: iconstyle.iconAnchor[1],
+        mask: true, // XXX: ignore color of icon image
+    };
+}
+
+function getSize(feature) {
+    const iconstyle = feature.properties.iconstyle;
+    if (!iconstyle) {
+        return 24;
+    }
+    return iconstyle.iconSize[0];
+}
+    </script>
+</body>
+</html>
