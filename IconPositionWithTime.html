@@ -45,8 +45,10 @@ if (latlonParam) {
 let zoom = +urlParams.get('zoom') || 14;
 let pitch = urlParams.has('pitch') ? +urlParams.get('pitch') : 0; // allow 0
 let interval = +urlParams.get('intervalMs') || 300;
-let tick = +urlParams.get('tickMs') || 10000;
+let tick = +urlParams.get('tickSec') || 10;
 let mapStyle = urlParams.get('mapStyle') || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+let hideLine = urlParams.get('hideLine');
+let tripsLayer = urlParams.get('tripsLayer');
 
 const jsonurl = urlParams.get('jsonurl');
 if (jsonurl) {
@@ -93,7 +95,7 @@ const deckgl = new deck.DeckGL({
     getTooltip: ({object}) => object && object.properties.popup,
 });
 
-let time = 0;
+let time = 0; // current showing time in seconds
 function loadData(json) {
     stopTimer();
 
@@ -110,16 +112,16 @@ function loadData(json) {
         });
     }
 
-    const [timeMin, timeMax] = timeinterval(json.features);
-    time = timeMin;
+    const [timeOffsetMs, timeMax] = setTimestamps(json.features);
+    time = 0;
     const tripFeatures = json.features.filter(f => f._featureTimes);
 
-    if (timeMin >= timeMax) {
+    if (timeMax < 1) {
         slider.style.display = "none";
         playButton.style.display = "none";
         pauseButton.style.display = "none";
     }
-    slider.min = String(timeMin);
+    slider.min = "0";
     slider.max = String(timeMax);
     slider.oninput = onSliderValueChange;
     function onSliderValueChange(ev) {
@@ -128,7 +130,8 @@ function loadData(json) {
         renderLayer(json, tripFeatures);
     }
     function updateSliderLabel(time) {
-        const label = (new Date(time)).toISOString().replace(/\.\d{3}/, '');
+        const ms = timeOffsetMs + time * 1000;
+        const label = (new Date(ms)).toLocaleTimeString();
         document.getElementById("label").textContent = label;
     }
 
@@ -149,10 +152,10 @@ function loadData(json) {
     startTimer();
 }
 
-function timeinterval(features) {
+function setTimestamps(features) {
     let min = +Infinity;
     let max = 0;
-    features.forEach((feature, idx) => {
+    features.forEach(feature => {
         const times = feature.properties.times;
         if (!times) {
             return;
@@ -170,7 +173,15 @@ function timeinterval(features) {
     if (!Number.isFinite(min)) {
         min = 0;
     }
-    return [min, max];
+
+    // XXX:TripsLayer stores timestamp as float32. long int cause precision loss
+    // So, use offsetMs and time in seconds.
+    const offsetMs = min;
+    const maxSec = (max - offsetMs) / 1000;
+    features.forEach(feature => {
+        feature._featureTimes = feature._featureTimes?.map(ms => (ms - offsetMs) / 1000);
+    });
+    return [offsetMs, maxSec];
 }
 
 function renderLayer(json, tripFeatures) {
@@ -201,6 +212,22 @@ function renderLayer(json, tripFeatures) {
             },
         }),
     ];
+    if (tripsLayer) {
+        layers.push(new deck.TripsLayer({
+            id: 'trips-layer',
+            data: tripFeatures,
+            getPath: f => getPath(f),
+            getTimestamps: f => f._featureTimes,
+            getColor: f => getColor(f, true),
+            opacity: 0.8,
+            widthMinPixels: 3,
+            jointRounded: true,
+            capRounded: true,
+            trailLength: 180,
+            currentTime: time,
+            shadowEnabled: false,
+        }));
+    }
     deckgl.setProps({layers: layers});
 }
 
@@ -230,10 +257,23 @@ function getPosition(feature, time) {
     return [null, null];
 }
 
+function getPath(feature) {
+    if (feature.geometry.type === 'Point') {
+        return null;
+    }
+    if (feature.geometry.type !== 'LineString') {
+        return null;
+    }
+    return feature.geometry.coordinates;
+}
+
 function getLineWidth(feature, time) {
     const featureTimes = feature._featureTimes;
     if (!featureTimes) {
         return 4;
+    }
+    if (hideLine) {
+        return 0;
     }
     if (time < featureTimes[0] || time > featureTimes.at(-1)) {
         return 0; // hide line

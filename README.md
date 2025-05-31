@@ -121,8 +121,10 @@ deck.gl IconLayer with time slider for TimestampedGeoJson data.
   * pitch (default: 0)
   * [mapStyle](https://deck.gl/docs/api-reference/core/deckgl#mapstyle) (default: `https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json`)
   * intervalMs: animation timer interval in milliseconds. (default: 300)
-  * tickMs: time increment on each interval in milliseconds. (default: 10000)
+  * tickSec: time increment on each interval in seconds. (default: 10)
   * jsonurl: heatmap json URL to load
+  * tripsLayer: add [TripsLayer](https://deck.gl/docs/api-reference/geo-layers/trips-layer)
+  * hideLine: hide timestamped LineString in GeoJSON.
 
 ## Other files
 * [gbfshist2heatmap.html](https://deton.github.io/HeatMapWithTime/gbfshist2heatmap.html): Make heatmap json for heatmapwithtime.html from gbfshist.ndjson
