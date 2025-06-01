@@ -111,9 +111,9 @@ deck.gl HexagonLayer with time slider for heatmap json data.
 ## IconPositionWithTime
 deck.gl IconLayer with time slider for TimestampedGeoJson data.
 
-* [IconPositionWithTime.html](https://deton.github.io/HeatMapWithTime/IconPositionWithTime.html?jsonurl=https://deton.github.io/HeatMapWithTime/sampledata4/gtfsShapeTimestamped.geojson)
+* [IconPositionWithTime.html](https://deton.github.io/HeatMapWithTime/IconPositionWithTime.html?tripWidth=6&iconScale=0.7&zoom=13&pointRadius=1&lineWidth=0&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata4/gunmaGtfsTimestamped.geojson)
 
-![IconPositionWithTime.png](https://github.com/user-attachments/assets/4570b7a5-8b10-4a14-bc07-7c2411d925d6)
+![IconPositionWithTime.png](https://github.com/user-attachments/assets/312a1360-3cb4-4496-93da-5dee49bb948a)
 
 * URL parameters
   * latlon: map center. (default: first latlon in json data)
