@@ -111,9 +111,9 @@ deck.gl HexagonLayer with time slider for heatmap json data.
 ## IconPositionWithTime
 deck.gl IconLayer with time slider for TimestampedGeoJson data.
 
-* [IconPositionWithTime.html](https://deton.github.io/HeatMapWithTime/IconPositionWithTime.html?jsonurl=https://deton.github.io/HeatMapWithTime/sampledata4/gtfsShapeTimestamped.geojson)
+* [IconPositionWithTime.html](https://deton.github.io/HeatMapWithTime/IconPositionWithTime.html?tripWidth=6&iconScale=0.7&zoom=13&pointRadius=1&lineWidth=0&jsonurl=https://deton.github.io/HeatMapWithTime/sampledata4/gunmaGtfsTimestamped.geojson)
 
-![IconPositionWithTime.png](https://github.com/user-attachments/assets/4570b7a5-8b10-4a14-bc07-7c2411d925d6)
+![IconPositionWithTime.png](https://github.com/user-attachments/assets/312a1360-3cb4-4496-93da-5dee49bb948a)
 
 * URL parameters
   * latlon: map center. (default: first latlon in json data)
@@ -121,8 +121,12 @@ deck.gl IconLayer with time slider for TimestampedGeoJson data.
   * pitch (default: 0)
   * [mapStyle](https://deck.gl/docs/api-reference/core/deckgl#mapstyle) (default: `https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json`)
   * intervalMs: animation timer interval in milliseconds. (default: 300)
-  * tickMs: time increment on each interval in milliseconds. (default: 10000)
+  * tickSec: time increment on each interval in seconds. (default: 10)
   * jsonurl: heatmap json URL to load
+  * tripWidth: trip line width of [TripsLayer](https://deck.gl/docs/api-reference/geo-layers/trips-layer). (default: 0)
+  * lineWidth: line width of timestamped LineString in GeoJSON. (default: 1)
+  * iconScale: size scale of moving icon. (default: 1)
+  * pointRadius: circle radius for Point in GeoJSON. (default: 2)
 
 ## Other files
 * [gbfshist2heatmap.html](https://deton.github.io/HeatMapWithTime/gbfshist2heatmap.html): Make heatmap json for heatmapwithtime.html from gbfshist.ndjson
@@ -160,4 +164,9 @@ deck.gl IconLayer with time slider for TimestampedGeoJson data.
 * sampledata3/ : Vélib' Metropole
 * sampledata4/ :
   * These sample data use the following copyrighted material with [modifications](https://gist.github.com/deton/8c4bd41faa4060dfa4a68066a5403be3#file-gtfs2timestampedgeojson-ipynb).
+    * [Nippon Chuo Bus Co.,Ltd. CC BY 4.0](https://ckan.odpt.org/dataset/nippon_chuo_bus_maebashi_area)
+    * [Gunma-Bus Corporation CC BY 4.0](https://ckan.odpt.org/dataset/gunma_bus_all_lines)
+    * [Gunmachuo-bus Corporation CC BY 4.0](https://ckan.odpt.org/dataset/gunmachuo_bus_all_lines)
+    * [Kan-etsu Transportation Co.,Ltd. CC BY 4.0](https://ckan.odpt.org/dataset/kan_etsu_transportation_all_lines)
+    * [永井運輸株式会社 CC BY 4.0](https://gtfs-data.jp/search?target_feed=nagai-unyu*Nagaibus)
     * [公開元: 横須賀市 CC BY 4.0](https://gtfs-data.jp/search?target_feed=yokosukacity*hamachanbus)
