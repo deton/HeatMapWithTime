@@ -123,8 +123,10 @@ deck.gl IconLayer with time slider for TimestampedGeoJson data.
   * intervalMs: animation timer interval in milliseconds. (default: 300)
   * tickSec: time increment on each interval in seconds. (default: 10)
   * jsonurl: heatmap json URL to load
-  * tripsLayer: add [TripsLayer](https://deck.gl/docs/api-reference/geo-layers/trips-layer)
-  * hideLine: hide timestamped LineString in GeoJSON.
+  * tripWidth: trip line width of [TripsLayer](https://deck.gl/docs/api-reference/geo-layers/trips-layer). (default: 0)
+  * lineWidth: line width of timestamped LineString in GeoJSON. (default: 1)
+  * iconScale: size scale of moving icon. (default: 1)
+  * pointRadius: circle radius for Point in GeoJSON. (default: 2)
 
 ## Other files
 * [gbfshist2heatmap.html](https://deton.github.io/HeatMapWithTime/gbfshist2heatmap.html): Make heatmap json for heatmapwithtime.html from gbfshist.ndjson
@@ -162,4 +164,9 @@ deck.gl IconLayer with time slider for TimestampedGeoJson data.
 * sampledata3/ : Vélib' Metropole
 * sampledata4/ :
   * These sample data use the following copyrighted material with [modifications](https://gist.github.com/deton/8c4bd41faa4060dfa4a68066a5403be3#file-gtfs2timestampedgeojson-ipynb).
+    * [Nippon Chuo Bus Co.,Ltd. CC BY 4.0](https://ckan.odpt.org/dataset/nippon_chuo_bus_maebashi_area)
+    * [Gunma-Bus Corporation CC BY 4.0](https://ckan.odpt.org/dataset/gunma_bus_all_lines)
+    * [Gunmachuo-bus Corporation CC BY 4.0](https://ckan.odpt.org/dataset/gunmachuo_bus_all_lines)
+    * [Kan-etsu Transportation Co.,Ltd. CC BY 4.0](https://ckan.odpt.org/dataset/kan_etsu_transportation_all_lines)
+    * [永井運輸株式会社 CC BY 4.0](https://gtfs-data.jp/search?target_feed=nagai-unyu*Nagaibus)
     * [公開元: 横須賀市 CC BY 4.0](https://gtfs-data.jp/search?target_feed=yokosukacity*hamachanbus)

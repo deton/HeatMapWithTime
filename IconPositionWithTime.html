@@ -47,8 +47,10 @@ let pitch = urlParams.has('pitch') ? +urlParams.get('pitch') : 0; // allow 0
 let interval = +urlParams.get('intervalMs') || 300;
 let tick = +urlParams.get('tickSec') || 10;
 let mapStyle = urlParams.get('mapStyle') || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
-let hideLine = urlParams.get('hideLine');
-let tripsLayer = urlParams.get('tripsLayer');
+let tripWidth = urlParams.has('tripWidth') ? +urlParams.get('tripWidth') : 0;
+let lineWidth = urlParams.has('lineWidth') ? +urlParams.get('lineWidth') : 1;
+let iconScale = urlParams.has('iconScale') ? +urlParams.get('iconScale') : 1;
+let pointRadius = urlParams.has('pointRadius') ? +urlParams.get('pointRadius') : 2;
 
 const jsonurl = urlParams.get('jsonurl');
 if (jsonurl) {
@@ -131,6 +133,7 @@ function loadData(json) {
     }
     function updateSliderLabel(time) {
         const ms = timeOffsetMs + time * 1000;
+        // TODO: timezone from urlParams
         const label = (new Date(ms)).toLocaleTimeString();
         document.getElementById("label").textContent = label;
     }
@@ -190,7 +193,10 @@ function renderLayer(json, tripFeatures) {
             id: 'geojson-layer',
             data: json,
             pointType: 'circle',
-            getPointRadius: 10,
+            getPointRadius: f => pointRadius || f.properties.iconstyle?.radius || 2,
+            pointRadiusUnits: 'pixels',
+            pointRadiusMinPixels: 1,
+            lineWidthUnits: 'pixels',
             pickable: true,
             getFillColor: f => getColor(f, true),
             getLineColor: f => getColor(f, false),
@@ -199,31 +205,36 @@ function renderLayer(json, tripFeatures) {
                 getLineWidth: time,
             },
         }),
-        new deck.IconLayer({
+    ];
+    if (iconScale > 0) {
+        layers.push(new deck.IconLayer({
             id: 'icon-layer',
             data: tripFeatures,
             getColor: f => getColor(f, false),
             getIcon: f => getIcon(f),
             getPosition: f => getPosition(f, time),
             getSize: f => getSize(f),
+            sizeScale: iconScale,
             sizeMinPixels: 2,
             updateTriggers: {
                 getPosition: time,
             },
-        }),
-    ];
-    if (tripsLayer) {
+        }));
+    }
+    if (tripWidth > 0) {
         layers.push(new deck.TripsLayer({
             id: 'trips-layer',
             data: tripFeatures,
             getPath: f => getPath(f),
             getTimestamps: f => f._featureTimes,
             getColor: f => getColor(f, true),
-            opacity: 0.8,
-            widthMinPixels: 3,
+            //opacity: 0.8,
+            getWidth: f => tripWidth || f.properties.style?.weight || 7,
+            widthUnits: 'pixels',
+            widthMinPixels: 4,
             jointRounded: true,
             capRounded: true,
-            trailLength: 180,
+            //trailLength: 180,
             currentTime: time,
             shadowEnabled: false,
         }));
@@ -270,15 +281,15 @@ function getPath(feature) {
 function getLineWidth(feature, time) {
     const featureTimes = feature._featureTimes;
     if (!featureTimes) {
-        return 4;
+        return feature.properties.style?.weight || 1;
     }
-    if (hideLine) {
+    if (lineWidth === 0) {
         return 0;
     }
     if (time < featureTimes[0] || time > featureTimes.at(-1)) {
         return 0; // hide line
     }
-    return 4;
+    return lineWidth || feature.properties.style?.weight || 1;
 }
 
 function getColor(feature, isfill) {
