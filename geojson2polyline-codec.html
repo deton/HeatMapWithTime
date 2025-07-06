@@ -4,10 +4,11 @@
 <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
 <meta name="viewport" content="width=device-width,
     initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>GeoJSON to polyline encoded string</title>
+<title>Converters between GeoJSON and polyline encoded string</title>
 </head>
 <body>
-<h1>GeoJSON LineString features to polyline encoded string</h1>
+<h1>Converters between GeoJSON and polyline encoded string</h1>
+<h2>GeoJSON LineString features to polyline encoded string</h2>
 <div>
     <ul>
         <li>Load input GeoJSON file: <input type="file" id="fileElem" accept=".geojson" /></li>
@@ -16,6 +17,16 @@
 
 <p>
 Output polyline encoded string to console.log.
+</p>
+
+<h2>polyline encoded string to GeoJSON</h2>
+<div>
+    <textarea id="textarea" cols="100" rows="5"></textarea><br>
+    <button id="polyline2geojson" onclick="polyline2geojson()">polyline to GeoJSON</button>
+</div>
+
+<p>
+Output GeoJSON to console.log.
 </p>
 
 <h2>Links</h2>
@@ -45,5 +56,13 @@ fileElem.addEventListener("change", () => {
     });
     //fileElem.value = '';
 });
+
+function polyline2geojson() {
+    const polylines = document.getElementById("textarea").value.split("\n");
+    for (const p of polylines) {
+        console.log(mapboxPolyline.toGeoJSON(p), p);
+    }
+}
+window.polyline2geojson = polyline2geojson;
 </script>
 </html>
