@@ -7,7 +7,7 @@
 <title>Converters between GeoJSON and polyline encoded string</title>
 </head>
 <body>
-<h1>Converters between GeoJSON and polyline encoded string</h1>
+<h1>Converter between GeoJSON and polyline encoded string</h1>
 <h2>GeoJSON LineString features to polyline encoded string</h2>
 <div>
     <ul>
@@ -59,9 +59,16 @@ fileElem.addEventListener("change", () => {
 
 function polyline2geojson() {
     const polylines = document.getElementById("textarea").value.split("\n");
-    for (const p of polylines) {
-        console.log(mapboxPolyline.toGeoJSON(p), p);
-    }
+    const features = polylines.map(p => {
+        return {
+            type: "Feature",
+            properties: {
+                _polyline: p,
+            },
+            geometry: mapboxPolyline.toGeoJSON(p),
+        };
+    });
+    console.log({type: "FeatureCollection", features});
 }
 window.polyline2geojson = polyline2geojson;
 </script>
