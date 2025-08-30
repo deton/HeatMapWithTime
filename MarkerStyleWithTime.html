@@ -100,18 +100,7 @@ map.timeDimension = L.timeDimension({
     duration: 'PT30M',
 });
 
-const tdControl = new L.Control.TimeDimensionCustom({
-    autoPlay: true,
-    loopButton: true,
-    minSpeed: 1,
-    speedStep: 0.5,
-    playerOptions: {
-        loop: true,
-        startOver: true,
-    },
-});
-map.addControl(tdControl);
-
+let tdControl;
 let iconDLayer;
 
 function loadData(data, filename) {
@@ -184,6 +173,19 @@ function loadData(data, filename) {
         iconLayer.addTo(map);
         layerControl.addOverlay(iconLayer, filename);
         return;
+    }
+    if (!tdControl) { // add tdControl only if hasTimes
+        tdControl = new L.Control.TimeDimensionCustom({
+            autoPlay: true,
+            loopButton: true,
+            minSpeed: 1,
+            speedStep: 0.5,
+            playerOptions: {
+                loop: true,
+                startOver: true,
+            },
+        });
+        map.addControl(tdControl);
     }
     //if (iconDLayer) {
     //    layerControl.remove(iconDLayer);
