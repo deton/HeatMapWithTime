@@ -62,6 +62,8 @@ const baseLayers = {
 var map = L.map('map', {
     preferCanvas: true,
     layers: [baseLayers['maptiler-basic-ja']],
+    center: [35.7574, 139.7293],
+    zoom: 13,
 });
 const layerControl = L.control.layers(baseLayers, null).addTo(map);
 
@@ -166,12 +168,12 @@ function loadData(data, filename) {
         };
     }
     const iconLayer = L.geoJson(data, geojsonOptions);
-    if (!latlon) {
-        map.fitBounds(iconLayer.getBounds());
-    }
     if (!hasTimes) { // add geojson layer if no times. (instead of replacing)
         iconLayer.addTo(map);
         layerControl.addOverlay(iconLayer, filename);
+        if (!latlon) {
+            map.fitBounds(iconLayer.getBounds());
+        }
         return;
     }
     if (!tdControl) { // add tdControl only if hasTimes
@@ -199,6 +201,9 @@ function loadData(data, filename) {
     });
     iconDLayer.addTo(map);
     layerControl.addOverlay(iconDLayer, filename);
+    if (!latlon) {
+        map.fitBounds(iconLayer.getBounds());
+    }
 }
 
 // based on https://github.com/python-visualization/folium/blob/553a33981fa29a9d4ce6c426563749188906610f/folium/plugins/timestamped_geo_json.py#L102
