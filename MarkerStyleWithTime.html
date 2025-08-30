@@ -223,17 +223,24 @@ function pointToLayer(feature, latLng, radiuskey) {
         }
         if (iconstyle) {
             if (!radiuskey) {
-                return new L.circleMarker(latLng, iconstyle);
+                if (iconstyle.radiusUnit === 'meter') {
+                    return new L.Circle(latLng, iconstyle);
+                }
+                return new L.CircleMarker(latLng, iconstyle);
             }
             const idx = getTimeIdx(feature.properties.times);
             const defradius = iconstyle.radius || 2;
-            return new L.circleMarker(latLng, {
+            const opts = {
                 ...iconstyle,
                 radius: feature.properties[radiuskey].at(idx) + defradius,
                 //radius: Math.log2(1 + feature.properties[radiuskey].at(idx)) + defradius,
-            });
+            };
+            if (iconstyle.radiusUnit === 'meter') {
+                return new L.Circle(latLng, opts);
+            }
+            return new L.CircleMarker(latLng, opts);
         }
-        return new L.circleMarker(latLng);
+        return new L.CircleMarker(latLng);
     }
     return new L.Marker(latLng);
 }
