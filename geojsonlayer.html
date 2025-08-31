@@ -124,6 +124,8 @@ function loadData(json) {
         slider.style.display = "none";
         playButton.style.display = "none";
         pauseButton.style.display = "none";
+        renderLayer(json);
+        return;
     }
     slider.min = String(timeMin);
     slider.max = String(timeMax);
@@ -206,11 +208,11 @@ function renderLayer(json) {
 }
 
 function getColor(feature, isfill, time) {
-    let color = feature.properties.iconstyle && feature.properties.iconstyle.color;
+    let color = feature.properties.iconstyle?.color;
     if (!color) {
         return [255, 0, 0, isfill ? 153 : 255];
     }
-    const colorneg = feature.properties.iconstyle.colorneg;
+    const colorneg = feature.properties.iconstyle?.colorneg;
     if (radiuskey && colorneg) {
         const radius = getPointRadiusAtTime(feature, time);
         if (radius < 0) {
@@ -251,7 +253,23 @@ function getIconColor(feature, time) {
 
 function getPointRadiusAtTime(feature, time) {
     const idx = getTimeIdx(feature, time);
-    const radius = feature.properties[radiuskey].at(idx);
+    let radius;
+    if (idx < 0) {
+        if (radiuskey) {
+            radius = feature.properties[radiuskey];
+        } else {
+            radius = feature.properties.iconstyle?.radius;
+        }
+    } else {
+        if (radiuskey) {
+            radius = feature.properties[radiuskey].at(idx);
+        } else {
+            radius = feature.properties.iconstyle?.radius;
+        }
+    }
+    if (radius === undefined) {
+        radius = 2;
+    }
     if (filterParam === '>0') {
         return radius > 0 ? radius : 0;
     }

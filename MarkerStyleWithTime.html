@@ -62,6 +62,8 @@ const baseLayers = {
 var map = L.map('map', {
     preferCanvas: true,
     layers: [baseLayers['maptiler-basic-ja']],
+    center: [35.7574, 139.7293],
+    zoom: 13,
 });
 const layerControl = L.control.layers(baseLayers, null).addTo(map);
 
@@ -100,18 +102,7 @@ map.timeDimension = L.timeDimension({
     duration: 'PT30M',
 });
 
-const tdControl = new L.Control.TimeDimensionCustom({
-    autoPlay: true,
-    loopButton: true,
-    minSpeed: 1,
-    speedStep: 0.5,
-    playerOptions: {
-        loop: true,
-        startOver: true,
-    },
-});
-map.addControl(tdControl);
-
+let tdControl;
 let iconDLayer;
 
 function loadData(data, filename) {
@@ -177,13 +168,26 @@ function loadData(data, filename) {
         };
     }
     const iconLayer = L.geoJson(data, geojsonOptions);
-    if (!latlon) {
-        map.fitBounds(iconLayer.getBounds());
-    }
     if (!hasTimes) { // add geojson layer if no times. (instead of replacing)
         iconLayer.addTo(map);
         layerControl.addOverlay(iconLayer, filename);
+        if (!latlon) {
+            map.fitBounds(iconLayer.getBounds());
+        }
         return;
+    }
+    if (!tdControl) { // add tdControl only if hasTimes
+        tdControl = new L.Control.TimeDimensionCustom({
+            autoPlay: true,
+            loopButton: true,
+            minSpeed: 1,
+            speedStep: 0.5,
+            playerOptions: {
+                loop: true,
+                startOver: true,
+            },
+        });
+        map.addControl(tdControl);
     }
     //if (iconDLayer) {
     //    layerControl.remove(iconDLayer);
@@ -197,6 +201,9 @@ function loadData(data, filename) {
     });
     iconDLayer.addTo(map);
     layerControl.addOverlay(iconDLayer, filename);
+    if (!latlon) {
+        map.fitBounds(iconLayer.getBounds());
+    }
 }
 
 // based on https://github.com/python-visualization/folium/blob/553a33981fa29a9d4ce6c426563749188906610f/folium/plugins/timestamped_geo_json.py#L102
@@ -223,17 +230,24 @@ function pointToLayer(feature, latLng, radiuskey) {
         }
         if (iconstyle) {
             if (!radiuskey) {
-                return new L.circleMarker(latLng, iconstyle);
+                if (iconstyle.radiusUnit === 'meter') {
+                    return new L.Circle(latLng, iconstyle);
+                }
+                return new L.CircleMarker(latLng, iconstyle);
             }
             const idx = getTimeIdx(feature.properties.times);
             const defradius = iconstyle.radius || 2;
-            return new L.circleMarker(latLng, {
+            const opts = {
                 ...iconstyle,
                 radius: feature.properties[radiuskey].at(idx) + defradius,
                 //radius: Math.log2(1 + feature.properties[radiuskey].at(idx)) + defradius,
-            });
+            };
+            if (iconstyle.radiusUnit === 'meter') {
+                return new L.Circle(latLng, opts);
+            }
+            return new L.CircleMarker(latLng, opts);
         }
-        return new L.circleMarker(latLng);
+        return new L.CircleMarker(latLng);
     }
     return new L.Marker(latLng);
 }
