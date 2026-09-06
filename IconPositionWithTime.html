@@ -3,9 +3,9 @@
   <head>
     <meta charset="utf-8">
     <title>Update icon position in TimestampedGeoJson</title>
-    <script src="https://unpkg.com/deck.gl@^9.0.0/dist.min.js"></script>
-    <script src='https://unpkg.com/maplibre-gl@3.0.0/dist/maplibre-gl.js'></script>
-    <link href='https://unpkg.com/maplibre-gl@3.0.0/dist/maplibre-gl.css' rel='stylesheet' />
+    <script src="https://unpkg.com/deck.gl@~9.3.6/dist.min.js"></script>
+    <script src='https://unpkg.com/maplibre-gl@^5.0.0/dist/maplibre-gl.js'></script>
+    <link href='https://unpkg.com/maplibre-gl@^5.0.0/dist/maplibre-gl.css' rel='stylesheet' />
     <style type="text/css">
     body {margin: 0; padding: 0;}
     #map {width: 100vw; height: 100vh;}
@@ -49,8 +49,15 @@ let tick = +urlParams.get('tickSec') || 10;
 let mapStyle = urlParams.get('mapStyle') || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 let tripWidth = urlParams.has('tripWidth') ? +urlParams.get('tripWidth') : 0;
 let lineWidth = urlParams.has('lineWidth') ? +urlParams.get('lineWidth') : 1;
-let iconScale = urlParams.has('iconScale') ? +urlParams.get('iconScale') : 1;
 let pointRadius = urlParams.has('pointRadius') ? +urlParams.get('pointRadius') : 2;
+let iconScale = urlParams.has('iconScale') ? +urlParams.get('iconScale') : 1;
+// default icon if no feature.properties.iconstyle
+let iconUrl = urlParams.get('iconUrl') || 'https://deton.github.io/folium_tripslayer/car.svg';
+let iconWidth = +urlParams.get('iconWidth') || 24;
+let iconHeight = +urlParams.get('iconHeight') || 24;
+let iconAnchorX = urlParams.has('iconAnchorX') ? +urlParams.get('iconAnchorX') : (iconWidth / 2);
+let iconAnchorY = urlParams.has('iconAnchorY') ? +urlParams.get('iconAnchorY') : (iconHeight / 2);
+let iconMask = urlParams.has('iconMask') ? !!urlParams.get('iconMask') : true;
 
 const jsonurl = urlParams.get('jsonurl');
 if (jsonurl) {
@@ -308,20 +315,24 @@ function getIcon(feature) {
     const iconstyle = feature.properties.iconstyle;
     if (!iconstyle) {
         return {
-            url: 'https://deton.github.io/folium_tripslayer/car.svg', // TODO: bus
-            width: 24,
-            height: 24,
-            anchorX: 12,
-            anchorY: 12,
-            mask: true, // XXX: ignore color of icon image
+            url: iconUrl,
+            width: iconWidth,
+            height: iconHeight,
+            anchorX: iconAnchorX,
+            anchorY: iconAnchorY,
+            mask: iconMask,
         };
+    }
+    let anchor = iconstyle.iconAnchor;
+    if (!anchor) {
+        anchor = iconstyle.iconSize.map(size => size / 2);
     }
     return {
         url: iconstyle.iconUrl,
         width: iconstyle.iconSize[0],
         height: iconstyle.iconSize[1],
-        anchorX: iconstyle.iconAnchor[0],
-        anchorY: iconstyle.iconAnchor[1],
+        anchorX: anchor[0],
+        anchorY: anchor[1],
         mask: true, // XXX: ignore color of icon image
     };
 }
