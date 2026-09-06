@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width,
+    initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Make CZML from TimestampedGeoJson</title>
+</head>
+<body>
+<h1>Make CZML from TimestampedGeoJson</h1>
+<form>
+    <ul>
+        <li>Load TimestampedGeoJson file: <input type="file" id="fileElem" accept=".geojson" multiple /></li>
+        <li>billboardurl: <input type="text" id="billboardurl" name="billboardurl" size="130" value="https://deton.github.io/folium_tripslayer/walk.svg"/></li>
+        <li>gltfurl: <input type="text" id="gltfurl" name="gltfurl" size="130" value="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/refs/heads/main/Models/Box/glTF-Binary/Box.glb"/></li>
+        <li>default altitude: <input type="text" id="altitude" name="altitude" value="100"/></li>
+    </ul>
+</form>
+</body>
+<script type="module">
+const fileElem = document.getElementById("fileElem");
+fileElem.addEventListener("change", () => {
+  const gltfurl = document.getElementById("gltfurl").value;
+  const billboardurl = document.getElementById("billboardurl").value;
+  const altitude = Number(document.getElementById("altitude").value);
+  const opts = {gltfurl, billboardurl, altitude};
+  Array.from(fileElem.files).forEach(file => {
+    file.text().then(text => {
+      const result = makeCzml(JSON.parse(text), opts);
+      const outfname = file.name.replace(/\.geojson$/, '.czml');
+      const outfile = new File([JSON.stringify(result)], outfname, {
+        type: 'application/json'
+      });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(outfile);
+      a.download = outfile.name;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }).catch(console.error);
+  });
+  //fileElem.value = '';
+});
+
+function makeCzml(featureCollection, opts) {
+  const times = [];
+  for (const feature of featureCollection.features) {
+    updateFeatureTimes(feature);
+    if (feature.featureTimes.length > 0) {
+      times.push(feature.featureTimes[0], feature.featureTimes.at(-1));
+    }
+  }
+  times.sort();
+  const epochms = times[0];
+  const availendms = times.at(-1);
+
+  const epochstr = new Date(epochms).toISOString();
+  const intervalstr = epochstr + '/' + (new Date(availendms).toISOString());
+  const czml = [{
+    id: 'document',
+    name: 'czml-from-TimestampedGeoJson',
+    version: '1.0',
+    clock: {
+      interval: intervalstr,
+      currentTime: epochstr,
+      multiplier: 5,
+    },
+  }];
+
+  featureCollection.features.forEach((feature, idx) => {
+    const id = feature.id || feature.properties.id || idx;
+    const czml1 = mkczml1(id, feature, opts);
+    if (czml1 === null) {
+      return;
+    }
+    czml.push(czml1);
+  });
+  return czml;
+}
+
+// cf. getFeatureTimes() of leaflet.timedimension.layer.geojson.js
+function updateFeatureTimes(feature) {
+  if (feature.featureTimes) {
+    return;
+  }
+  if (!feature.properties) {
+    feature.featureTimes = [];
+  } else if (feature.properties.hasOwnProperty('coordTimes')) {
+    feature.featureTimes = feature.properties.coordTimes;
+  } else if (feature.properties.hasOwnProperty('times')) {
+    feature.featureTimes = feature.properties.times;
+  } else if (feature.properties.hasOwnProperty('linestringTimestamps')) {
+    feature.featureTimes = feature.properties.linestringTimestamps;
+  } else if (feature.properties.hasOwnProperty('datetimes')) {
+    // MF-JSON (Moving Features JSON) Trajectory
+    feature.featureTimes = feature.properties.datetimes;
+  } else if (feature.properties.hasOwnProperty('time')) {
+    feature.featureTimes = [feature.properties.time];
+  } else {
+    feature.featureTimes = [];
+  }
+  // String dates to ms
+  feature.featureTimes = feature.featureTimes.filter(time => {
+    if (typeof time == 'string' || time instanceof String) {
+      return Date.parse(time.trim());
+    }
+    return time;
+  });
+}
+
+function mkczml1(id, feature, opts) {
+  if (feature.geometry.type != 'LineString') {
+    // TODO: support other type
+    return null;
+  }
+  const epochms = feature.featureTimes[0];
+  const arr = [];
+  const altitudes = feature.properties.altitude;
+  feature.geometry.coordinates.forEach((lnglat, idx) => {
+    const t = Math.round((feature.featureTimes[idx] - epochms) / 1000.0);
+    arr.push(t); // seconds from epoch
+    arr.push(lnglat[0]); // longitude
+    arr.push(lnglat[1]); // latitude
+    arr.push(altitudes ? altitudes[idx] : (opts.altitude || 0));
+  });
+  const availendms = feature.featureTimes.at(-1);
+  const epochstr = new Date(epochms).toISOString();
+  const availability = epochstr + '/' + (new Date(availendms).toISOString());
+  const czml1 = {
+    id,
+    availability,
+    path: {
+      width: 1,
+    },
+  };
+  if (opts.billboardurl) {
+    czml1.billboard = {
+      image: opts.billboardUrl,
+    };
+  }
+  if (opts.gltfurl) {
+    czml1.model = {
+      show: true,
+      gltf: opts.gltfurl,
+      minimumPixelSize: 1,
+    };
+  }
+  czml1.orientation = {
+    velocityReference: '#position'
+  };
+  czml1.position = {
+    epoch: epochstr,
+    cartographicDegrees: arr
+  };
+  return czml1;
+}
+</script>
+</html>
