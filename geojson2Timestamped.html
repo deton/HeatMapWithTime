@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width,
+    initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Add times property to GeoJSON</title>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+</head>
+<body>
+<h1>Add times property to GeoJSON</h1>
+<form>
+    <ul>
+        <li>Load GeoJSON file: <input type="file" id="fileElem" accept=".geojson" multiple /></li>
+        <li>start time: <input type="text" id="start" name="start" size="40"/></li>
+        <li>speed: <input type="text" id="speed" name="speed" value="2"/> [m/s]</li>
+    </ul>
+</form>
+</body>
+<script type="module">
+const startElem = document.getElementById("start");
+if (!startElem.value) {
+  startElem.value = (new Date()).toISOString();
+}
+
+const fileElem = document.getElementById("fileElem");
+fileElem.addEventListener("change", () => {
+  const opts = {
+    start: new Date(startElem.value),
+    speed: +document.getElementById("speed").value,
+  };
+  Array.from(fileElem.files).forEach(file => {
+    file.text().then(text => {
+      const result = addTimestamp(JSON.parse(text), opts);
+      const outfname = file.name.replace(/\.geojson$/, '.timestamped.geojson');
+      const outfile = new File([JSON.stringify(result)], outfname, {
+        type: 'application/geo+json'
+      });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(outfile);
+      a.download = outfile.name;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }).catch(console.error);
+  });
+  //fileElem.value = '';
+});
+
+function addTimestamp(featureCollection, opts) {
+  const features = [];
+  for (const feature of featureCollection.features) {
+    addTimestamp1(feature, opts);
+    features.push(feature);
+  }
+  featureCollection.features = features;
+  return featureCollection;
+}
+
+function addTimestamp1(feature, opts) {
+  if (feature.geometry.type != 'LineString') {
+    // TODO: support other type
+    return feature;
+  }
+
+  const times = [];
+  let lastms = opts.start.getTime();
+  let lastPoint = turf.point(feature.geometry.coordinates[0]);
+  for (const lonlat of feature.geometry.coordinates) {
+    const to = turf.point(lonlat);
+    const dist = turf.distance(lastPoint, to); // [km]
+    const secs = dist * 1000 / opts.speed;
+    lastms += secs * 1000;
+    lastPoint = to;
+    times.push((new Date(lastms)).toISOString());
+  }
+  feature.properties.times = times;
+  return feature;
+}
+</script>
+</html>
