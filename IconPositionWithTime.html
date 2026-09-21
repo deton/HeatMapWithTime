@@ -106,6 +106,9 @@ const deckgl = new deck.DeckGL({
 
 let time = 0; // current showing time in seconds
 function loadData(json) {
+    if (!json.features) {  // not FeatureCollection. treat as a Feature
+        json = {type: "FeatureCollection", features: [json]};
+    }
     stopTimer();
 
     if (!latlonParam) {
@@ -169,7 +172,9 @@ function setTimestamps(features) {
     let min = +Infinity;
     let max = 0;
     features.forEach(feature => {
-        const times = feature.properties.times;
+        // times properties of TimestampedGeoJson(Leaflet.TimeDimension).
+        // 'datetimes': OGC MF-JSON Trajectory
+        const times = feature.properties.coordTimes || feature.properties.times || feature.properties.linestringTimestamps || feature.properties.datetimes;
         if (!times) {
             return;
         }
